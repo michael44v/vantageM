@@ -6,5 +6,3 @@ export const store = configureStore({
     trading: tradingReducer,
   },
 });
-
-export default store;

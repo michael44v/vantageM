@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchLiveTrades } from "../store/slices/tradingSlice";
+import { fetchLiveTrades, executeTrade } from "../store/slices/tradingSlice";
+import TradeModal from "../components/terminal/TradeModal";
 import {
   TrendingUp, TrendingDown, Clock, Search,
   ChevronRight, ArrowLeft, LayoutDashboard, Settings,
@@ -17,11 +18,15 @@ export default function TerminalPage() {
   const [activeSymbol, setActiveSymbol] = useState("EUR/USD");
   const [orderType, setOrderType] = useState("market");
   const [lots, setLots] = useState("0.01");
+  const [showTradeModal, setShowTradeModal] = useState(false);
 
+  // Simulation: find account details
   const accounts = [
-    { number: "8800123", type: "Raw ECN", balance: "5,000.00", status: "Live" },
-    { number: "9900456", type: "Standard STP", balance: "10,000.00", status: "Demo" },
+    { id: 1, number: "8800123", type: "Raw ECN", balance: "5000.00", leverage: 500, status: "Live" },
+    { id: 2, number: "9900456", type: "Standard STP", balance: "10000.00", leverage: 500, status: "Demo" },
   ];
+
+  const currentAccount = accounts.find(a => a.number === selectedAccount);
 
   const symbols = [
     { name: "EUR/USD", price: "1.08542", change: "+0.12%", up: true },
@@ -265,12 +270,18 @@ export default function TerminalPage() {
               </div>
 
               <div className="pt-4 grid grid-cols-2 gap-4">
-                 <button className="flex flex-col items-center justify-center bg-red-500 hover:bg-red-600 transition-all rounded-xl p-4 group">
+                 <button
+                    onClick={() => setShowTradeModal(true)}
+                    className="flex flex-col items-center justify-center bg-red-500 hover:bg-red-600 transition-all rounded-xl p-4 group"
+                 >
                     <TrendingDown className="w-6 h-6 mb-1 group-hover:-translate-y-0.5 transition-transform" />
                     <span className="text-xs font-bold">SELL</span>
                     <span className="text-[10px] opacity-60">1.08538</span>
                  </button>
-                 <button className="flex flex-col items-center justify-center bg-emerald-500 hover:bg-emerald-600 transition-all rounded-xl p-4 group">
+                 <button
+                    onClick={() => setShowTradeModal(true)}
+                    className="flex flex-col items-center justify-center bg-emerald-500 hover:bg-emerald-600 transition-all rounded-xl p-4 group"
+                 >
                     <TrendingUp className="w-6 h-6 mb-1 group-hover:-translate-y-0.5 transition-transform" />
                     <span className="text-xs font-bold">BUY</span>
                     <span className="text-[10px] opacity-60">1.08542</span>
@@ -290,6 +301,16 @@ export default function TerminalPage() {
            </div>
         </aside>
       </div>
+
+      {showTradeModal && (
+        <TradeModal
+          symbol={activeSymbol}
+          price={symbols.find(s => s.name === activeSymbol)?.price || "1.08542"}
+          account={currentAccount}
+          onClose={() => setShowTradeModal(false)}
+          onExecute={onTradeExecute}
+        />
+      )}
     </div>
   );
 }

@@ -10,6 +10,7 @@ A simplified, robust full-stack trading application built with React, Redux Tool
 - **Simplified Backend:** Single-file procedural API (`backend/api.php`) using MySQLi for high performance and low complexity.
 - **Redux State Management:** Centralized frontend state handling using Redux Toolkit for seamless data synchronization.
 - **Admin Live Monitoring:** Dedicated dashboard for administrators to view real-time open positions and live PnL calculations across all users.
+- **Advanced Execution:** Integrated Trade Modal with lot sizing, dynamic leverage adjustment, and margin requirement verification.
 - **Interactive Terminal:** Dark-mode web terminal with account selection, market watch, and position management.
 - **Automatic Refresh:** Data polling and manual refresh buttons integrated into key trading views.
 
@@ -52,6 +53,9 @@ All requests go to `backend/api.php?action=<action_name>`.
 | `get_accounts` | GET | Fetch user's trading accounts |
 | `get_positions` | GET | Fetch open trades for an account |
 | `admin_live_trades` | GET | (Admin) View all global open trades |
+| `execute_trade` | POST | Place a new Buy/Sell order |
+| `update_leverage` | POST | Change account leverage settings |
+| `internal_transfer` | POST | Move funds between wallet and account |
 
 ---
 

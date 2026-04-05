@@ -1,3 +1,6 @@
+import { useEffect } from "react";
+import { useDispatch } from "react-redux";
+import { simulatePriceMove } from "./store/slices/tradingSlice";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { RequireAdmin, RedirectIfAuth, RequireAuth } from "./components/ProtectedRoute";
@@ -29,6 +32,15 @@ import CopyTradingPage from "./pages/dashboard/CopyTradingPage";
 import TerminalPage from "./pages/TerminalPage";
 
 export default function App() {
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      dispatch(simulatePriceMove());
+    }, 1000); // Pulse every second
+    return () => clearInterval(interval);
+  }, [dispatch]);
+
   return (
     <AuthProvider>
       <BrowserRouter>

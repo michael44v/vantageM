@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Base API Configuration
-const API_BASE_URL = 'https://vantagemarketts.com/api';
+const API_BASE_URL = 'https://vantagemarkets.com/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,

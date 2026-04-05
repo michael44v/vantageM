@@ -71,6 +71,15 @@ switch ($action) {
     case 'deposit':
         handle_deposit($db, $input);
         break;
+    case 'execute_trade':
+        handle_execute_trade($db, $input);
+        break;
+    case 'update_leverage':
+        handle_update_leverage($db, $input);
+        break;
+    case 'internal_transfer':
+        handle_internal_transfer($db, $input);
+        break;
     default:
         send_json(['success' => false, 'error' => 'Action not found: ' . $action], 404);
 }
@@ -155,4 +164,60 @@ function handle_upload_kyc($db) {
 
 function handle_deposit($db, $input) {
     send_json(['success' => true, 'message' => 'Deposit initiated', 'url' => 'https://commerce.coinbase.com/charges/mock']);
+}
+
+function handle_execute_trade($db, $input) {
+    $user_id = 2; // Simulated auth
+    $acc_id = (int)$input['account_id'];
+    $symbol = $db->real_escape_string($input['symbol']);
+    $type = $db->real_escape_string($input['type']); // long/short
+    $lots = (float)$input['lots'];
+    $price = (float)$input['price'];
+
+    // 1. Get Account Details (Balance & Leverage)
+    $res = $db->query("SELECT balance, leverage FROM trading_accounts WHERE id = $acc_id AND user_id = $user_id LIMIT 1");
+    $acc = $res->fetch_assoc();
+
+    if (!$acc) send_json(['success' => false, 'error' => 'Account not found'], 404);
+
+    // 2. Execution Mathematics (Margin Calculation)
+    // Formula: (Lots * Contract Size * Price) / Leverage
+    $contract_size = 100000;
+    $required_margin = ($lots * $contract_size * $price) / $acc['leverage'];
+
+    if ($acc['balance'] < $required_margin) {
+        send_json(['success' => false, 'error' => 'Insufficient funds in trading account. Please transfer from wallet.'], 400);
+    }
+
+    // 3. Record Position
+    $sql = "INSERT INTO positions (user_id, trading_account_id, symbol, type, lots, entry_price, current_price, status)
+            VALUES ($user_id, $acc_id, '$symbol', '$type', $lots, $price, $price, 'open')";
+
+    if ($db->query($sql)) {
+        send_json(['success' => true, 'message' => 'Order executed successfully', 'trade_id' => $db->insert_id]);
+    }
+    send_json(['success' => false, 'error' => $db->error], 500);
+}
+
+function handle_update_leverage($db, $input) {
+    $acc_id = (int)$input['account_id'];
+    $leverage = (int)$input['leverage'];
+    $db->query("UPDATE trading_accounts SET leverage = $leverage WHERE id = $acc_id");
+    send_json(['success' => true, 'message' => 'Leverage updated']);
+}
+
+function handle_internal_transfer($db, $input) {
+    $user_id = 2; // Simulated auth
+    $acc_id = (int)$input['account_id'];
+    $amount = (float)$input['amount'];
+    $direction = $input['direction']; // wallet_to_acc or acc_to_wallet
+
+    if ($direction === 'wallet_to_acc') {
+        $db->query("UPDATE users SET wallet_balance = wallet_balance - $amount WHERE id = $user_id");
+        $db->query("UPDATE trading_accounts SET balance = balance + $amount WHERE id = $acc_id");
+    } else {
+        $db->query("UPDATE trading_accounts SET balance = balance - $amount WHERE id = $acc_id");
+        $db->query("UPDATE users SET wallet_balance = wallet_balance + $amount WHERE id = $user_id");
+    }
+    send_json(['success' => true, 'message' => 'Transfer successful']);
 }

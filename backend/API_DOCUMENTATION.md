@@ -2,7 +2,7 @@
 
 This document specifies the REST API endpoints for the Vantage Markets platform. The backend is implemented using PHP with the **MySQLi** extension.
 
-**Base URL:** `https://vantagemarketts.com/api/`
+**Base URL:** `https://vantagemarkets.com/api/`
 **Content-Type:** `application/json`
 **Authentication:** Bearer JWT (required for protected routes)
 

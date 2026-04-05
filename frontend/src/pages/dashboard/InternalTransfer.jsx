@@ -1,15 +1,38 @@
 import { useState } from "react";
-import { ArrowRightLeft, Wallet, TrendingUp, ArrowRight, AlertCircle } from "lucide-react";
+import { useDispatch } from "react-redux";
+import { ArrowRightLeft, Wallet, TrendingUp, ArrowRight, AlertCircle, Loader2 } from "lucide-react";
+import { accountService } from "../../services/api";
 
 export default function InternalTransfer() {
   const [from, setFrom] = useState("wallet");
   const [to, setTo] = useState("");
   const [amount, setAmount] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const accounts = [
-    { number: "8800123", type: "Raw ECN", balance: "5,000.00", status: "Live" },
-    { number: "9900456", type: "Standard STP", balance: "10,000.00", status: "Demo" },
+    { id: 1, number: "8800123", type: "Raw ECN", balance: "5,000.00", status: "Live" },
+    { id: 2, number: "9900456", type: "Standard STP", balance: "10,000.00", status: "Demo" },
   ];
+
+  const handleTransfer = async () => {
+    if (!amount || !to) return;
+    setLoading(true);
+    try {
+      const payload = {
+        account_id: to === 'wallet' ? (from === '8800123' ? 1 : 2) : (to === '8800123' ? 1 : 2),
+        amount: parseFloat(amount),
+        direction: from === 'wallet' ? 'wallet_to_acc' : 'acc_to_wallet'
+      };
+      // In production: await accountService.internalTransfer(payload);
+      await new Promise(r => setTimeout(r, 1000));
+      alert("Transfer successful!");
+      setAmount("");
+    } catch (err) {
+      alert("Transfer failed: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="max-w-2xl mx-auto space-y-8 animate-fade-in">
@@ -75,8 +98,14 @@ export default function InternalTransfer() {
            </p>
         </div>
 
-        <button className="w-full btn-primary py-4 flex items-center justify-center gap-2">
-           Transfer Funds <ArrowRight className="w-4 h-4" />
+        <button
+           onClick={handleTransfer}
+           disabled={loading || !amount || !to}
+           className="w-full btn-primary py-4 flex items-center justify-center gap-2"
+        >
+           {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (
+              <>Transfer Funds <ArrowRight className="w-4 h-4" /></>
+           )}
         </button>
       </div>
     </div>
