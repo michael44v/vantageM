@@ -1,0 +1,87 @@
+version: "3.9"
+
+services:
+  # ── MySQL Database ──────────────────────────────────────────────────────────
+  db:
+    image: mysql:8.0
+    container_name: ablemarkets_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: ablemarkets
+      MYSQL_USER: ablemarkets
+      MYSQL_PASSWORD: ablemarkets_pass
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./backend/database.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── PHP Backend ─────────────────────────────────────────────────────────────
+  backend:
+    image: php:8.2-apache
+    container_name: ablemarkets_backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:80"
+    volumes:
+      - ./backend:/var/www/html
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: ablemarkets
+      DB_USER: ablemarkets
+      DB_PASSWORD: ablemarkets_pass
+      JWT_SECRET: docker_dev_jwt_secret_change_in_production
+      APP_ENV: development
+      FRONTEND_URL: http://localhost:3000
+    command: >
+      bash -c "
+        docker-php-ext-install pdo pdo_mysql &&
+        a2enmod rewrite &&
+        sed -i 's/AllowOverride None/AllowOverride All/g' /etc/apache2/apache2.conf &&
+        apache2-foreground
+      "
+
+  # ── React Frontend ──────────────────────────────────────────────────────────
+  frontend:
+    image: node:20-alpine
+    container_name: ablemarkets_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    working_dir: /app
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      VITE_API_URL: http://localhost:8000/api
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+
+  # ── phpMyAdmin (optional — remove in production) ───────────────────────────
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: ablemarkets_phpmyadmin
+    restart: unless-stopped
+    depends_on:
+      - db
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: db
+      PMA_USER: ablemarkets
+      PMA_PASSWORD: ablemarkets_pass
+
+volumes:
+  db_data:
+    driver: local
