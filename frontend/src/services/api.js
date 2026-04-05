@@ -1,65 +1,76 @@
-import axios from "axios";
+import axios from 'axios';
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
+// Base API Configuration
+const API_BASE_URL = 'https://vantagemarkets.com/api';
 
 const api = axios.create({
-  baseURL: API_BASE,
-  withCredentials: true,
-  headers: { "Content-Type": "application/json" },
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
 });
 
-api.interceptors.request.use((config) => {
-  const user = localStorage.getItem("vantagemarkets_user");
-  if (user) {
-    const { token } = JSON.parse(user);
-    if (token) config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-api.interceptors.response.use(
-  (res) => res,
-  (err) => {
-    if (err.response?.status === 401) {
-      localStorage.removeItem("vantagemarkets_user");
-      window.location.href = "/login";
+// Request Interceptor (JWT handling)
+api.interceptors.request.use(
+  (config) => {
+    const user = JSON.parse(localStorage.getItem('vantagemarkets_user'));
+    if (user && user.token) {
+      config.headers.Authorization = `Bearer ${user.token}`;
     }
-    return Promise.reject(err);
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Response Interceptor (Error management)
+api.interceptors.response.use(
+  (response) => response.data,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      localStorage.removeItem('vantagemarkets_user');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error.response?.data || error.message);
   }
 );
 
-// Auth
-export const authAPI = {
-  login: (data) => api.post("/auth/login", data),
-  register: (data) => api.post("/auth/register", data),
-  logout: () => api.post("/auth/logout"),
+export const authService = {
+  login: (credentials) => api.post('/auth/login', credentials),
+  register: (userData) => api.post('/auth/register', userData),
+  logout: () => api.post('/auth/logout'),
 };
 
-// Users (admin)
-export const usersAPI = {
-  getAll: (params) => api.get("/admin/users", { params }),
-  getById: (id) => api.get(`/admin/users/${id}`),
-  update: (id, data) => api.put(`/admin/users/${id}`, data),
-  delete: (id) => api.delete(`/admin/users/${id}`),
-  updateStatus: (id, status) => api.patch(`/admin/users/${id}/status`, { status }),
+export const accountService = {
+  getAccounts: () => api.get('/accounts'),
+  createAccount: (data) => api.post('/accounts', data),
+  internalTransfer: (data) => api.post('/payments/transfer', data),
 };
 
-// Transactions (admin)
-export const transactionsAPI = {
-  getAll: (params) => api.get("/admin/transactions", { params }),
-  approve: (id) => api.patch(`/admin/transactions/${id}/approve`),
-  reject: (id) => api.patch(`/admin/transactions/${id}/reject`),
+export const kycService = {
+  getStatus: () => api.get('/kyc'),
+  upload: (formData) => api.post('/kyc/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
 };
 
-// Dashboard stats (admin)
-export const dashboardAPI = {
-  getStats: () => api.get("/admin/dashboard/stats"),
-  getChartData: () => api.get("/admin/dashboard/chart"),
+export const paymentService = {
+  deposit: (data) => api.post('/payments/deposit', data),
 };
 
-// Contact / Lead
-export const leadAPI = {
-  submit: (data) => api.post("/leads", data),
+export const tradingService = {
+  execute: (data) => api.post('/trading/execute', data),
+  getPositions: (accountId) => api.get(`/trading/positions?account_id=${accountId}`),
+  getSignals: () => api.get('/signals'),
+  copySignal: (data) => api.post('/signals/copy', data),
+};
+
+export const adminService = {
+  getStats: () => api.get('/admin/dashboard/stats'),
+  getUsers: (params) => api.get('/admin/users', { params }),
+  updateUserStatus: (id, status) => api.patch(`/admin/users/${id}/status`, { status }),
+  getTransactions: () => api.get('/admin/transactions'),
+  approveTransaction: (id) => api.patch(`/admin/transactions/${id}/approve`),
+  rejectTransaction: (id) => api.patch(`/admin/transactions/${id}/reject`),
 };
 
 export default api;
