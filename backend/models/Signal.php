@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace VantageMarkets\Models;
 
 use VantageMarkets\Config\Database;
-use PDO;
+use mysqli;
 
 class Signal
 {
-    private PDO $db;
+    private mysqli $db;
 
     public function __construct()
     {
@@ -18,7 +18,7 @@ class Signal
 
     public function getAll(): array
     {
-        $stmt = $this->db->query("SELECT s.*, u.name as provider_name FROM signals s JOIN users u ON s.user_id = u.id WHERE s.status = 'active'");
-        return $stmt->fetchAll();
+        $result = $this->db->query("SELECT s.*, u.name as provider_name FROM signals s JOIN users u ON s.user_id = u.id WHERE s.status = 'active'");
+        return $result->fetch_all(MYSQLI_ASSOC);
     }
 }

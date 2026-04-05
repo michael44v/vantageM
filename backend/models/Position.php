@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace VantageMarkets\Models;
 
 use VantageMarkets\Config\Database;
-use PDO;
+use mysqli;
 
 class Position
 {
-    private PDO $db;
+    private mysqli $db;
 
     public function __construct()
     {
@@ -18,30 +18,37 @@ class Position
 
     public function findByAccountId(int $accountId): array
     {
-        $stmt = $this->db->prepare("SELECT * FROM positions WHERE trading_account_id = :account_id AND status = 'open'");
-        $stmt->execute([':account_id' => $accountId]);
-        return $stmt->fetchAll();
+        $stmt = $this->db->prepare("SELECT * FROM positions WHERE trading_account_id = ? AND status = 'open'");
+        $stmt->bind_param("i", $accountId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $data = $result->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        return $data;
     }
 
     public function create(array $data): int
     {
         $stmt = $this->db->prepare(
             "INSERT INTO positions (user_id, trading_account_id, symbol, type, lots, entry_price, current_price, stop_loss, take_profit)
-             VALUES (:user_id, :trading_account_id, :symbol, :type, :lots, :entry_price, :current_price, :stop_loss, :take_profit)"
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
         );
 
-        $stmt->execute([
-            ':user_id' => $data['user_id'],
-            ':trading_account_id' => $data['trading_account_id'],
-            ':symbol' => $data['symbol'],
-            ':type' => $data['type'],
-            ':lots' => $data['lots'],
-            ':entry_price' => $data['entry_price'],
-            ':current_price' => $data['entry_price'], // Initial current_price = entry_price
-            ':stop_loss' => $data['stop_loss'] ?? null,
-            ':take_profit' => $data['take_profit'] ?? null
-        ]);
+        $userId = $data['user_id'];
+        $accId = $data['trading_account_id'];
+        $symbol = $data['symbol'];
+        $type = $data['type'];
+        $lots = $data['lots'];
+        $entry = $data['entry_price'];
+        $current = $data['entry_price']; // Initial current_price = entry_price
+        $sl = $data['stop_loss'] ?? null;
+        $tp = $data['take_profit'] ?? null;
 
-        return (int) $this->db->lastInsertId();
+        $stmt->bind_param("iisssdddd", $userId, $accId, $symbol, $type, $lots, $entry, $current, $sl, $tp);
+        $stmt->execute();
+        $id = $this->db->insert_id;
+        $stmt->close();
+
+        return (int) $id;
     }
 }

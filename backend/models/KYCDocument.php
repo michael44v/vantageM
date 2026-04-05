@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace VantageMarkets\Models;
 
 use VantageMarkets\Config\Database;
-use PDO;
+use mysqli;
 
 class KYCDocument
 {
-    private PDO $db;
+    private mysqli $db;
 
     public function __construct()
     {
@@ -18,24 +18,31 @@ class KYCDocument
 
     public function findByUserId(int $userId): array
     {
-        $stmt = $this->db->prepare("SELECT * FROM kyc_documents WHERE user_id = :user_id");
-        $stmt->execute([':user_id' => $userId]);
-        return $stmt->fetchAll();
+        $stmt = $this->db->prepare("SELECT * FROM kyc_documents WHERE user_id = ?");
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $data = $result->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        return $data;
     }
 
     public function create(array $data): int
     {
         $stmt = $this->db->prepare(
             "INSERT INTO kyc_documents (user_id, document_type, file_url, status)
-             VALUES (:user_id, :document_type, :file_url, 'pending')"
+             VALUES (?, ?, ?, 'pending')"
         );
 
-        $stmt->execute([
-            ':user_id' => $data['user_id'],
-            ':document_type' => $data['document_type'],
-            ':file_url' => $data['file_url']
-        ]);
+        $userId = $data['user_id'];
+        $docType = $data['document_type'];
+        $fileUrl = $data['file_url'];
 
-        return (int) $this->db->lastInsertId();
+        $stmt->bind_param("iss", $userId, $docType, $fileUrl);
+        $stmt->execute();
+        $id = $this->db->insert_id;
+        $stmt->close();
+
+        return (int) $id;
     }
 }

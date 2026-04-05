@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace VantageMarkets\Models;
 
 use VantageMarkets\Config\Database;
-use PDO;
+use mysqli;
 
 class TradingAccount
 {
-    private PDO $db;
+    private mysqli $db;
 
     public function __construct()
     {
@@ -18,28 +18,35 @@ class TradingAccount
 
     public function findByUserId(int $userId): array
     {
-        $stmt = $this->db->prepare("SELECT * FROM trading_accounts WHERE user_id = :user_id");
-        $stmt->execute([':user_id' => $userId]);
-        return $stmt->fetchAll();
+        $stmt = $this->db->prepare("SELECT * FROM trading_accounts WHERE user_id = ?");
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $data = $result->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        return $data;
     }
 
     public function create(array $data): int
     {
         $stmt = $this->db->prepare(
             "INSERT INTO trading_accounts (user_id, account_number, type, is_demo, balance, leverage, currency)
-             VALUES (:user_id, :account_number, :type, :is_demo, :balance, :leverage, :currency)"
+             VALUES (?, ?, ?, ?, ?, ?, ?)"
         );
 
-        $stmt->execute([
-            ':user_id' => $data['user_id'],
-            ':account_number' => $data['account_number'],
-            ':type' => $data['type'],
-            ':is_demo' => $data['is_demo'] ? 1 : 0,
-            ':balance' => $data['balance'] ?? 0.00,
-            ':leverage' => $data['leverage'] ?? 500,
-            ':currency' => $data['currency'] ?? 'USD'
-        ]);
+        $userId = $data['user_id'];
+        $accNum = $data['account_number'];
+        $type = $data['type'];
+        $isDemo = $data['is_demo'] ? 1 : 0;
+        $balance = $data['balance'] ?? 0.00;
+        $leverage = $data['leverage'] ?? 500;
+        $currency = $data['currency'] ?? 'USD';
 
-        return (int) $this->db->lastInsertId();
+        $stmt->bind_param("isssdis", $userId, $accNum, $type, $isDemo, $balance, $leverage, $currency);
+        $stmt->execute();
+        $id = $this->db->insert_id;
+        $stmt->close();
+
+        return (int) $id;
     }
 }

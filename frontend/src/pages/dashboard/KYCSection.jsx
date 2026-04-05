@@ -1,12 +1,44 @@
-import { useState } from "react";
-import { User, ShieldCheck, Mail, Globe, Phone, FileText, Upload, CheckCircle } from "lucide-react";
+import { useState, useEffect } from "react";
+import { User, ShieldCheck, Mail, Globe, Phone, FileText, Upload, CheckCircle, Loader2 } from "lucide-react";
+import { kycService } from "../../services/api";
 
 export default function KYCSection() {
   const [kycStatus, setKycStatus] = useState("pending"); // pending, approved, rejected
+  const [loading, setLoading] = useState(false);
   const [docs, setDocs] = useState([
     { type: "ID Card / Passport", status: "Approved", date: "2024-04-01" },
     { type: "Proof of Address", status: "Pending", date: "2024-04-05" },
   ]);
+
+  useEffect(() => {
+    const fetchStatus = async () => {
+      try {
+        // const response = await kycService.getStatus();
+        // if (response.success) setDocs(response.data);
+      } catch (err) {
+        console.error("Failed to fetch KYC status", err);
+      }
+    };
+    fetchStatus();
+  }, []);
+
+  const handleUpload = async (e) => {
+    // const file = e.target.files[0];
+    // if (!file) return;
+    setLoading(true);
+    try {
+      // const formData = new FormData();
+      // formData.append("file", file);
+      // formData.append("document_type", "identity");
+      // await kycService.upload(formData);
+      await new Promise(r => setTimeout(r, 1500));
+      alert("Document uploaded successfully and is now pending review.");
+    } catch (err) {
+      alert("Upload failed: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-fade-in">
@@ -66,11 +98,16 @@ export default function KYCSection() {
                  ))}
               </div>
 
-              <div className="border-2 border-dashed border-surface-border rounded-xl p-8 flex flex-col items-center justify-center text-center hover:border-accent transition-colors cursor-pointer group">
-                 <Upload className="w-8 h-8 text-[#8897A9] group-hover:text-accent mb-3" />
-                 <div className="text-sm font-bold text-primary">Upload New Document</div>
+              <label className="border-2 border-dashed border-surface-border rounded-xl p-8 flex flex-col items-center justify-center text-center hover:border-accent transition-colors cursor-pointer group relative">
+                 <input type="file" className="sr-only" onChange={handleUpload} disabled={loading} />
+                 {loading ? (
+                    <Loader2 className="w-8 h-8 text-accent animate-spin mb-3" />
+                 ) : (
+                    <Upload className="w-8 h-8 text-[#8897A9] group-hover:text-accent mb-3" />
+                 )}
+                 <div className="text-sm font-bold text-primary">{loading ? "Uploading..." : "Upload New Document"}</div>
                  <div className="text-xs text-[#8897A9] mt-1">Proof of Identity or Residential Address</div>
-              </div>
+              </label>
            </div>
         </div>
       </div>

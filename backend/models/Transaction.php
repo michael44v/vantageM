@@ -5,14 +5,14 @@ declare(strict_types=1);
 namespace VantageMarkets\Models;
 
 use VantageMarkets\Config\Database;
-use PDO;
+use mysqli;
 
 /**
- * Transaction — Data-access object for the `transactions` table.
+ * Transaction — Data-access object for the `transactions` table using MySQLi.
  */
 final class Transaction
 {
-    private PDO $db;
+    private mysqli $db;
 
     public function __construct()
     {
@@ -25,8 +25,6 @@ final class Transaction
 
     /**
      * Return a paginated list of transactions with optional filters.
-     *
-     * @return array{data: list<array<string,mixed>>, total: int, page: int, perPage: int}
      */
     public function getAll(
         int    $page      = 1,
@@ -37,56 +35,64 @@ final class Transaction
     ): array {
         $offset = ($page - 1) * $perPage;
         $where  = [];
+        $types  = "";
         $params = [];
 
         if ($search !== '') {
-            $where[]           = '(u.name LIKE :search OR t.reference LIKE :search)';
-            $params[':search']  = "%{$search}%";
+            $where[] = '(u.name LIKE ? OR t.reference LIKE ?)';
+            $searchParam = "%{$search}%";
+            $params[] = $searchParam;
+            $params[] = $searchParam;
+            $types .= "ss";
         }
         if ($type !== '' && $type !== 'All') {
-            $where[]          = 't.type = :type';
-            $params[':type']   = $type;
+            $where[] = 't.type = ?';
+            $params[] = $type;
+            $types .= "s";
         }
         if ($status !== '' && $status !== 'All') {
-            $where[]           = 't.status = :status';
-            $params[':status']  = $status;
+            $where[] = 't.status = ?';
+            $params[] = $status;
+            $types .= "s";
         }
 
         $whereClause = $where ? 'WHERE ' . implode(' AND ', $where) : '';
 
-        $countStmt = $this->db->prepare(
-            "SELECT COUNT(*) FROM transactions t
-             LEFT JOIN users u ON u.id = t.user_id
-             {$whereClause}"
-        );
-        $countStmt->execute($params);
-        $total = (int) $countStmt->fetchColumn();
+        // Total count
+        $countSql = "SELECT COUNT(*) FROM transactions t
+                     LEFT JOIN users u ON u.id = t.user_id
+                     {$whereClause}";
+        $countStmt = $this->db->prepare($countSql);
+        if ($params) {
+            $countStmt->bind_param($types, ...$params);
+        }
+        $countStmt->execute();
+        $total = 0;
+        $countStmt->bind_result($total);
+        $countStmt->fetch();
+        $countStmt->close();
 
-        $params[':limit']  = $perPage;
-        $params[':offset'] = $offset;
-
-        $stmt = $this->db->prepare(
-            "SELECT t.id, t.reference, u.name AS user_name, t.type, t.amount,
+        // Paginated rows
+        $sql = "SELECT t.id, t.reference, u.name AS user_name, t.type, t.amount,
                     t.currency, t.method, t.status, t.created_at
              FROM transactions t
              LEFT JOIN users u ON u.id = t.user_id
              {$whereClause}
              ORDER BY t.created_at DESC
-             LIMIT :limit OFFSET :offset"
-        );
+             LIMIT ? OFFSET ?";
 
-        foreach ($params as $key => $value) {
-            if (in_array($key, [':limit', ':offset'], true)) {
-                $stmt->bindValue($key, $value, PDO::PARAM_INT);
-            } else {
-                $stmt->bindValue($key, $value);
-            }
-        }
-
+        $stmt = $this->db->prepare($sql);
+        $finalTypes = $types . "ii";
+        $finalParams = [...$params, $perPage, $offset];
+        $stmt->bind_param($finalTypes, ...$finalParams);
         $stmt->execute();
 
+        $result = $stmt->get_result();
+        $data = $result->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+
         return [
-            'data'    => $stmt->fetchAll(),
+            'data'    => $data,
             'total'   => $total,
             'page'    => $page,
             'perPage' => $perPage,
@@ -95,8 +101,6 @@ final class Transaction
 
     /**
      * Find a transaction by primary key.
-     *
-     * @return array<string, mixed>|null
      */
     public function findById(int $id): ?array
     {
@@ -104,10 +108,13 @@ final class Transaction
             'SELECT t.*, u.name AS user_name, u.email AS user_email
              FROM transactions t
              LEFT JOIN users u ON u.id = t.user_id
-             WHERE t.id = :id LIMIT 1'
+             WHERE t.id = ? LIMIT 1'
         );
-        $stmt->execute([':id' => $id]);
-        $row = $stmt->fetch();
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $row = $result->fetch_assoc();
+        $stmt->close();
         return $row ?: null;
     }
 
@@ -117,37 +124,36 @@ final class Transaction
 
     /**
      * Create a new transaction record.
-     *
-     * @param array<string, mixed> $data
      */
     public function create(array $data): int
     {
-        $stmt = $this->db->prepare(
-            'INSERT INTO transactions (user_id, reference, type, amount, currency, method, status, receipt_url, tx_hash, from_account_id, to_account_id)
-             VALUES (:user_id, :reference, :type, :amount, :currency, :method, :status, :receipt_url, :tx_hash, :from_account_id, :to_account_id)'
-        );
+        $sql = 'INSERT INTO transactions (user_id, reference, type, amount, currency, method, status, receipt_url, tx_hash, from_account_id, to_account_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
 
-        $stmt->execute([
-            ':user_id'   => $data['user_id'],
-            ':reference' => $data['reference'] ?? $this->generateReference(),
-            ':type'      => $data['type'],       // deposit | withdrawal | internal_transfer
-            ':amount'    => $data['amount'],
-            ':currency'  => $data['currency'] ?? 'USD',
-            ':method'    => $data['method'] ?? 'Internal',
-            ':status'    => $data['status'] ?? 'pending',
-            ':receipt_url' => $data['receipt_url'] ?? null,
-            ':tx_hash' => $data['tx_hash'] ?? null,
-            ':from_account_id' => $data['from_account_id'] ?? null,
-            ':to_account_id' => $data['to_account_id'] ?? null,
-        ]);
+        $stmt = $this->db->prepare($sql);
 
-        return (int) $this->db->lastInsertId();
+        $userId = $data['user_id'];
+        $reference = $data['reference'] ?? $this->generateReference();
+        $type = $data['type'];
+        $amount = $data['amount'];
+        $currency = $data['currency'] ?? 'USD';
+        $method = $data['method'] ?? 'Internal';
+        $status = $data['status'] ?? 'pending';
+        $receiptUrl = $data['receipt_url'] ?? null;
+        $txHash = $data['tx_hash'] ?? null;
+        $fromAccId = $data['from_account_id'] ?? null;
+        $toAccId = $data['to_account_id'] ?? null;
+
+        $stmt->bind_param("isddsssssii", $userId, $reference, $type, $amount, $currency, $method, $status, $receiptUrl, $txHash, $fromAccId, $toAccId);
+        $stmt->execute();
+        $id = $this->db->insert_id;
+        $stmt->close();
+
+        return (int) $id;
     }
 
     /**
      * Update a transaction's status.
-     *
-     * @param string $status  One of: completed, rejected, processing, pending
      */
     public function updateStatus(int $id, string $status): bool
     {
@@ -157,9 +163,12 @@ final class Transaction
         }
 
         $stmt = $this->db->prepare(
-            'UPDATE transactions SET status = :status, updated_at = NOW() WHERE id = :id'
+            'UPDATE transactions SET status = ?, updated_at = NOW() WHERE id = ?'
         );
-        return $stmt->execute([':status' => $status, ':id' => $id]);
+        $stmt->bind_param("si", $status, $id);
+        $success = $stmt->execute();
+        $stmt->close();
+        return $success;
     }
 
     // -------------------------------------------------------------------------
@@ -168,12 +177,10 @@ final class Transaction
 
     /**
      * Return summary figures for the admin dashboard.
-     *
-     * @return array{total_deposits: float, total_withdrawals: float, pending_count: int}
      */
     public function getSummary(): array
     {
-        $stmt = $this->db->query(
+        $result = $this->db->query(
             "SELECT
                 COALESCE(SUM(CASE WHEN type = 'deposit'    AND status = 'completed' THEN amount ELSE 0 END), 0) AS total_deposits,
                 COALESCE(SUM(CASE WHEN type = 'withdrawal' AND status = 'completed' THEN amount ELSE 0 END), 0) AS total_withdrawals,
@@ -181,17 +188,13 @@ final class Transaction
              FROM transactions"
         );
 
-        $row = $stmt->fetch();
+        $row = $result->fetch_assoc();
         return [
             'total_deposits'    => (float) $row['total_deposits'],
             'total_withdrawals' => (float) $row['total_withdrawals'],
             'pending_count'     => (int)   $row['pending_count'],
         ];
     }
-
-    // -------------------------------------------------------------------------
-    // Private helpers
-    // -------------------------------------------------------------------------
 
     private function generateReference(): string
     {

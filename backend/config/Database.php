@@ -4,42 +4,40 @@ declare(strict_types=1);
 
 namespace VantageMarkets\Config;
 
-use PDO;
-use PDOException;
+use mysqli;
+use Exception;
 
 /**
- * Database — Singleton PDO connection manager.
+ * Database — Singleton MySQLi connection manager.
  *
- * Reads credentials from environment variables (set in .env or server config).
- * Falls back to default local values for development.
+ * Reads credentials from environment variables.
+ * Uses the object-oriented mysqli extension as requested.
  */
 final class Database
 {
     private static ?Database $instance = null;
-    private PDO $connection;
+    private mysqli $connection;
 
     private function __construct()
     {
         $host     = $_ENV['DB_HOST']     ?? 'localhost';
-        $port     = $_ENV['DB_PORT']     ?? '3306';
+        $port     = (int)($_ENV['DB_PORT'] ?? '3306');
         $name     = $_ENV['DB_NAME']     ?? 'vantagemarkets';
         $user     = $_ENV['DB_USER']     ?? 'root';
         $password = $_ENV['DB_PASSWORD'] ?? '';
-        $charset  = 'utf8mb4';
-
-        $dsn = "mysql:host={$host};port={$port};dbname={$name};charset={$charset}";
-
-        $options = [
-            PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_EMULATE_PREPARES   => false,
-        ];
 
         try {
-            $this->connection = new PDO($dsn, $user, $password, $options);
-        } catch (PDOException $e) {
+            mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+            $this->connection = new mysqli($host, $user, $password, $name, $port);
+            $this->connection->set_charset("utf8mb4");
+        } catch (Exception $e) {
             http_response_code(500);
-            echo json_encode(['error' => 'Database connection failed.']);
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => false,
+                'error'   => 'Database connection failed.',
+                'details' => $e->getMessage()
+            ]);
             exit;
         }
     }
@@ -52,7 +50,7 @@ final class Database
         return self::$instance;
     }
 
-    public function getConnection(): PDO
+    public function getConnection(): mysqli
     {
         return $this->connection;
     }
