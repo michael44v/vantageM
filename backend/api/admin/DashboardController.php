@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace AbleMarkets\Api\Admin;
+namespace VantageMarkets\Api\Admin;
 
-use AbleMarkets\Models\User;
-use AbleMarkets\Models\Transaction;
-use AbleMarkets\Middleware\AuthMiddleware;
-use AbleMarkets\Utils\Response;
+use VantageMarkets\Models\User;
+use VantageMarkets\Models\Transaction;
+use VantageMarkets\Middleware\AuthMiddleware;
+use VantageMarkets\Utils\Response;
 
 /**
  * DashboardController — Aggregated stats for /api/admin/dashboard.

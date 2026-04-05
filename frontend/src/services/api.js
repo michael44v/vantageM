@@ -9,7 +9,7 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const user = localStorage.getItem("ablemarkets_user");
+  const user = localStorage.getItem("vantagemarkets_user");
   if (user) {
     const { token } = JSON.parse(user);
     if (token) config.headers.Authorization = `Bearer ${token}`;
@@ -21,7 +21,7 @@ api.interceptors.response.use(
   (res) => res,
   (err) => {
     if (err.response?.status === 401) {
-      localStorage.removeItem("ablemarkets_user");
+      localStorage.removeItem("vantagemarkets_user");
       window.location.href = "/login";
     }
     return Promise.reject(err);

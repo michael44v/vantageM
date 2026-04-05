@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace AbleMarkets\Models;
+namespace VantageMarkets\Models;
 
-use AbleMarkets\Config\Database;
+use VantageMarkets\Config\Database;
 use PDO;
 
 /**

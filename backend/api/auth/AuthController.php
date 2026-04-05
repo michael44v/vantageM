@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace AbleMarkets\Api\Auth;
+namespace VantageMarkets\Api\Auth;
 
-use AbleMarkets\Models\User;
-use AbleMarkets\Middleware\AuthMiddleware;
-use AbleMarkets\Utils\Response;
+use VantageMarkets\Models\User;
+use VantageMarkets\Middleware\AuthMiddleware;
+use VantageMarkets\Utils\Response;
 
 /**
  * AuthController — Handles /api/auth/login and /api/auth/register.

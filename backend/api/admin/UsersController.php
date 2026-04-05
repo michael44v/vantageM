@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace AbleMarkets\Api\Admin;
+namespace VantageMarkets\Api\Admin;
 
-use AbleMarkets\Models\User;
-use AbleMarkets\Middleware\AuthMiddleware;
-use AbleMarkets\Utils\Response;
+use VantageMarkets\Models\User;
+use VantageMarkets\Middleware\AuthMiddleware;
+use VantageMarkets\Utils\Response;
 
 /**
  * UsersController — Admin CRUD for /api/admin/users.

@@ -66,7 +66,7 @@ export default function AdminDashboard() {
       {/* Header */}
       <div>
         <h1 className="font-display font-extrabold text-3xl text-primary mb-1">Dashboard</h1>
-        <p className="text-sm text-[#4A5568]">Welcome back. Here is what is happening across ABle Markets today.</p>
+        <p className="text-sm text-[#4A5568]">Welcome back. Here is what is happening across Vantage Markets today.</p>
       </div>
 
       {/* Stat cards */}
@@ -109,11 +109,11 @@ export default function AdminDashboard() {
               <XAxis dataKey="day" tick={{ fontSize: 11, fill: "#8897A9" }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 11, fill: "#8897A9" }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
               <Tooltip
-                contentStyle={{ background: "#0B1E3D", border: "none", borderRadius: 8, color: "white", fontSize: 12 }}
+                contentStyle={{ background: "#111111", border: "none", borderRadius: 8, color: "white", fontSize: 12 }}
                 formatter={(v, n) => [`$${v.toLocaleString()}`, n === "deposits" ? "Deposits" : "Withdrawals"]}
               />
               <Bar dataKey="deposits" fill="#00B4A6" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="withdrawals" fill="#E8500A" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="withdrawals" fill="#FFC800" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
           <div className="flex items-center gap-6 mt-4">
@@ -130,13 +130,13 @@ export default function AdminDashboard() {
             <AreaChart data={earningsChartData}>
               <defs>
                 <linearGradient id="adminGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#E8500A" stopOpacity={0.25} />
-                  <stop offset="100%" stopColor="#E8500A" stopOpacity={0} />
+                  <stop offset="0%" stopColor="#FFC800" stopOpacity={0.25} />
+                  <stop offset="100%" stopColor="#FFC800" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#8897A9" }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={{ background: "#0B1E3D", border: "none", borderRadius: 8, color: "white", fontSize: 12 }} />
-              <Area dataKey="value" stroke="#E8500A" strokeWidth={2} fill="url(#adminGrad)" dot={false} />
+              <Tooltip contentStyle={{ background: "#111111", border: "none", borderRadius: 8, color: "white", fontSize: 12 }} />
+              <Area dataKey="value" stroke="#FFC800" strokeWidth={2} fill="url(#adminGrad)" dot={false} />
             </AreaChart>
           </ResponsiveContainer>
           <div className="mt-4 pt-4 border-t border-surface-border grid grid-cols-2 gap-4">
