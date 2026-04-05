@@ -8,6 +8,7 @@ import { useAuth } from "../../context/AuthContext";
 
 const navItems = [
   { label: "Dashboard", path: "/admin", icon: LayoutDashboard, end: true },
+  { label: "Live Trades", path: "/admin/live-trades", icon: Activity },
   { label: "Users", path: "/admin/users", icon: Users },
   { label: "Transactions", path: "/admin/transactions", icon: ArrowLeftRight },
   { label: "KYC Review", path: "/admin/kyc", icon: ShieldCheck },

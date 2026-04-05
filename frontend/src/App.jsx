@@ -13,6 +13,7 @@ import RegisterPage from "./pages/RegisterPage";
 
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminLiveTrades from "./pages/admin/AdminLiveTrades";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminTransactions from "./pages/admin/AdminTransactions";
 import AdminKYC from "./pages/admin/AdminKYC";
@@ -51,6 +52,7 @@ export default function App() {
           </Route>
           <Route path="/admin" element={<RequireAdmin><AdminLayout /></RequireAdmin>}>
             <Route index element={<AdminDashboard />} />
+            <Route path="live-trades" element={<AdminLiveTrades />} />
             <Route path="users" element={<AdminUsers />} />
             <Route path="transactions" element={<AdminTransactions />} />
             <Route path="kyc" element={<AdminKYC />} />

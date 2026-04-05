@@ -1,13 +1,17 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchLiveTrades } from "../store/slices/tradingSlice";
 import {
   TrendingUp, TrendingDown, Clock, Search,
   ChevronRight, ArrowLeft, LayoutDashboard, Settings,
-  Zap, Shield, Globe, Info, Maximize2
+  Zap, Shield, Globe, Info, Maximize2, RefreshCcw
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
 export default function TerminalPage() {
+  const dispatch = useDispatch();
+  const { liveTrades, loading } = useSelector((state) => state.trading);
   const { user } = useAuth();
   const [selectedAccount, setSelectedAccount] = useState("");
   const [activeSymbol, setActiveSymbol] = useState("EUR/USD");
@@ -28,9 +32,14 @@ export default function TerminalPage() {
     { name: "ETH/USD", price: "3421.15", change: "-0.85%", up: false },
   ];
 
-  const positions = [
-    { id: "POS-9921", symbol: "EUR/USD", type: "Buy", lots: "0.10", entry: "1.08410", current: "1.08542", pnl: "+13.20" },
-  ];
+  // Filter trades for the selected account
+  const positions = liveTrades.filter(t => t.account_number === selectedAccount);
+
+  useEffect(() => {
+    if (selectedAccount) {
+      dispatch(fetchLiveTrades());
+    }
+  }, [selectedAccount, dispatch]);
 
   if (!selectedAccount) {
     return (
@@ -154,10 +163,20 @@ export default function TerminalPage() {
 
            {/* Bottom: Positions / History */}
            <div className="h-64 bg-primary-dark flex flex-col overflow-hidden">
-              <div className="flex items-center gap-6 px-4 border-b border-white/10 h-10 flex-shrink-0">
-                 <button className="text-xs font-bold text-accent border-b-2 border-accent h-full">Open Positions (1)</button>
-                 <button className="text-xs font-bold text-white/40 hover:text-white transition-colors h-full">Pending Orders (0)</button>
-                 <button className="text-xs font-bold text-white/40 hover:text-white transition-colors h-full">Trade History</button>
+              <div className="flex items-center justify-between px-4 border-b border-white/10 h-10 flex-shrink-0">
+                 <div className="flex items-center gap-6 h-full">
+                    <button className="text-xs font-bold text-accent border-b-2 border-accent h-full">Open Positions ({positions.length})</button>
+                    <button className="text-xs font-bold text-white/40 hover:text-white transition-colors h-full">Pending Orders (0)</button>
+                    <button className="text-xs font-bold text-white/40 hover:text-white transition-colors h-full">Trade History</button>
+                 </div>
+                 <button
+                    onClick={() => dispatch(fetchLiveTrades())}
+                    className="text-white/40 hover:text-white transition-all p-1"
+                    title="Refresh Data"
+                    disabled={loading}
+                 >
+                    <RefreshCcw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
+                 </button>
               </div>
               <div className="flex-1 overflow-y-auto">
                  <table className="w-full text-left text-[11px]">
@@ -180,9 +199,11 @@ export default function TerminalPage() {
                              <td className="px-4 py-3 font-bold">{p.symbol}</td>
                              <td className="px-4 py-3"><span className="text-emerald-400">{p.type}</span></td>
                              <td className="px-4 py-3">{p.lots}</td>
-                             <td className="px-4 py-3 font-mono">{p.entry}</td>
-                             <td className="px-4 py-3 font-mono">{p.current}</td>
-                             <td className="px-4 py-3 text-right font-bold text-emerald-400 font-mono">{p.pnl} USD</td>
+                             <td className="px-4 py-3 font-mono">{p.entry_price}</td>
+                             <td className="px-4 py-3 font-mono">{p.current_price}</td>
+                             <td className={`px-4 py-3 text-right font-bold font-mono ${parseFloat(p.pnl) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                {parseFloat(p.pnl) >= 0 ? '+' : ''}{parseFloat(p.pnl).toFixed(2)} USD
+                             </td>
                              <td className="px-4 py-3 text-right">
                                 <button className="p-1 hover:bg-red-500/20 text-red-400 rounded transition-all">Close</button>
                              </td>
