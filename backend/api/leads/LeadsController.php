@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace AbleMarkets\Api\Leads;
+namespace VantageMarkets\Api\Leads;
 
-use AbleMarkets\Models\Lead;
-use AbleMarkets\Utils\Response;
+use VantageMarkets\Models\Lead;
+use VantageMarkets\Utils\Response;
 
 /**
  * LeadsController — Public endpoint for /api/leads (newsletter & enquiries).

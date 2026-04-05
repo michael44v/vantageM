@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace AbleMarkets\Api\Admin;
+namespace VantageMarkets\Api\Admin;
 
-use AbleMarkets\Models\Transaction;
-use AbleMarkets\Middleware\AuthMiddleware;
-use AbleMarkets\Utils\Response;
+use VantageMarkets\Models\Transaction;
+use VantageMarkets\Middleware\AuthMiddleware;
+use VantageMarkets\Utils\Response;
 
 /**
  * TransactionsController — Admin management of /api/admin/transactions.

@@ -171,7 +171,7 @@ export const platforms = [
   },
   {
     id: "app",
-    name: "ABle App",
+    name: "Vantage App",
     tag: "iOS / Android",
     badge: null,
     description:

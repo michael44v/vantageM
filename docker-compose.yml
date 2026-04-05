@@ -4,13 +4,13 @@ services:
   # ── MySQL Database ──────────────────────────────────────────────────────────
   db:
     image: mysql:8.0
-    container_name: ablemarkets_db
+    container_name: vantagemarkets_db
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: ablemarkets
-      MYSQL_USER: ablemarkets
-      MYSQL_PASSWORD: ablemarkets_pass
+      MYSQL_DATABASE: vantagemarkets
+      MYSQL_USER: vantagemarkets
+      MYSQL_PASSWORD: vantagemarkets_pass
     ports:
       - "3306:3306"
     volumes:
@@ -25,7 +25,7 @@ services:
   # ── PHP Backend ─────────────────────────────────────────────────────────────
   backend:
     image: php:8.2-apache
-    container_name: ablemarkets_backend
+    container_name: vantagemarkets_backend
     restart: unless-stopped
     depends_on:
       db:
@@ -37,9 +37,9 @@ services:
     environment:
       DB_HOST: db
       DB_PORT: 3306
-      DB_NAME: ablemarkets
-      DB_USER: ablemarkets
-      DB_PASSWORD: ablemarkets_pass
+      DB_NAME: vantagemarkets
+      DB_USER: vantagemarkets
+      DB_PASSWORD: vantagemarkets_pass
       JWT_SECRET: docker_dev_jwt_secret_change_in_production
       APP_ENV: development
       FRONTEND_URL: http://localhost:3000
@@ -54,7 +54,7 @@ services:
   # ── React Frontend ──────────────────────────────────────────────────────────
   frontend:
     image: node:20-alpine
-    container_name: ablemarkets_frontend
+    container_name: vantagemarkets_frontend
     restart: unless-stopped
     depends_on:
       - backend
@@ -71,7 +71,7 @@ services:
   # ── phpMyAdmin (optional — remove in production) ───────────────────────────
   phpmyadmin:
     image: phpmyadmin:latest
-    container_name: ablemarkets_phpmyadmin
+    container_name: vantagemarkets_phpmyadmin
     restart: unless-stopped
     depends_on:
       - db
@@ -79,8 +79,8 @@ services:
       - "8080:80"
     environment:
       PMA_HOST: db
-      PMA_USER: ablemarkets
-      PMA_PASSWORD: ablemarkets_pass
+      PMA_USER: vantagemarkets
+      PMA_PASSWORD: vantagemarkets_pass
 
 volumes:
   db_data:

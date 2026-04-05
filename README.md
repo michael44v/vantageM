@@ -1,4 +1,4 @@
-# ABle Markets — Full-Stack Trading Broker Platform
+# Vantage Markets — Full-Stack Trading Broker Platform
 
 A production-ready, full-stack web application for a global online CFD and forex trading broker. Built with React + Vite + Tailwind CSS on the frontend and PHP (OOP) + MySQL on the backend.
 
@@ -26,16 +26,16 @@ A production-ready, full-stack web application for a global online CFD and forex
 
 ## 1. Project Overview
 
-ABle Markets is a globally focused CFD and forex brokerage platform that allows traders to buy and sell financial instruments across currencies, gold, indices, equities, ETFs, and energy markets.
+Vantage Markets is a globally focused CFD and forex brokerage platform that allows traders to buy and sell financial instruments across currencies, gold, indices, equities, ETFs, and energy markets.
 
 ### Key Features
 
 **Public site**
 - Animated hero section with live price ticker
-- Spreads comparison table (ABle Markets vs market average)
+- Spreads comparison table (Vantage Markets vs market average)
 - Six instrument categories with tabbed switcher (Forex, Indices, Gold, Energy, ETFs, Shares)
 - Three account type comparison (Standard, Raw ECN, Pro ECN)
-- Platform showcase for MT4, MT5, TradingView, and ABle App
+- Platform showcase for MT4, MT5, TradingView, and Vantage App
 - Copy trading leaderboard
 - Interactive commission calculator for partner programme
 - Promotions and bonus pages
@@ -90,7 +90,7 @@ ABle Markets is a globally focused CFD and forex brokerage platform that allows 
 ## 3. Project Structure
 
 ```
-ablemarkets/
+vantagemarkets/
 ├── frontend/                          # React + Vite + Tailwind
 │   ├── public/
 │   ├── src/
@@ -167,10 +167,10 @@ All colours are defined as Tailwind extended theme tokens in `tailwind.config.js
 
 | Token | Hex | Usage |
 |---|---|---|
-| `primary.DEFAULT` | `#0B1E3D` | Main brand navy — nav, footer, hero, headings |
-| `primary.light` | `#1a3560` | Hover states on dark backgrounds |
-| `accent.DEFAULT` | `#E8500A` | Primary CTA, active links, highlights |
-| `accent.light` | `#FF6B35` | Hover states for accent elements |
+| `primary.DEFAULT` | `#111111` | Main brand navy — nav, footer, hero, headings |
+| `primary.light` | `#222222` | Hover states on dark backgrounds |
+| `accent.DEFAULT` | `#FFC800` | Primary CTA, active links, highlights |
+| `accent.light` | `#FFD733` | Hover states for accent elements |
 | `teal.DEFAULT` | `#00B4A6` | Secondary accent, positive indicators, check marks |
 | `teal.light` | `#00d4c4` | Teal hover states |
 | `gold.DEFAULT` | `#F5A623` | Star ratings, awards, partner highlights |
@@ -182,7 +182,7 @@ All colours are defined as Tailwind extended theme tokens in `tailwind.config.js
 
 | Usage | Colour |
 |---|---|
-| Primary text / headings | `#0B1E3D` |
+| Primary text / headings | `#111111` |
 | Body / description text | `#4A5568` |
 | Muted labels / captions | `#8897A9` |
 | Positive change | `#10B981` (Tailwind `emerald-500`) |
@@ -326,8 +326,8 @@ php -S localhost:8000
 ```nginx
 server {
     listen 80;
-    server_name api.ablemarkets.com;
-    root /var/www/ablemarkets/backend;
+    server_name api.vantagemarkets.com;
+    root /var/www/vantagemarkets/backend;
     index index.php;
 
     location / {
@@ -431,7 +431,7 @@ All responses follow this envelope:
 
 ```json
 {
-  "email": "trader@ablemarkets.com",
+  "email": "trader@vantagemarkets.com",
   "password": "trader123"
 }
 ```
@@ -447,7 +447,7 @@ All responses follow this envelope:
     "user": {
       "id": 2,
       "name": "Demo Trader",
-      "email": "trader@ablemarkets.com",
+      "email": "trader@vantagemarkets.com",
       "role": "trader",
       "account_type": "raw_ecn"
     }
@@ -510,7 +510,7 @@ The backend uses stateless HS256 JWT authentication implemented without external
 
 1. Client sends credentials to `POST /api/auth/login`.
 2. Server validates credentials, generates a signed JWT (24-hour expiry).
-3. Client stores the token in `localStorage` (key: `ablemarkets_user`).
+3. Client stores the token in `localStorage` (key: `vantagemarkets_user`).
 4. Axios interceptor attaches the token as `Authorization: Bearer <token>` on every request.
 5. If the server returns `401`, the interceptor clears localStorage and redirects to `/login`.
 
@@ -519,7 +519,7 @@ The backend uses stateless HS256 JWT authentication implemented without external
 ```json
 {
   "sub": 1,
-  "email": "admin@ablemarkets.com",
+  "email": "admin@vantagemarkets.com",
   "role": "admin",
   "name": "Admin User",
   "iat": 1712000000,
@@ -576,8 +576,8 @@ The admin sidebar is collapsible. Click the toggle icon in the top bar to expand
 
 | Role | Email | Password |
 |---|---|---|
-| Admin | admin@ablemarkets.com | admin123 |
-| Trader | trader@ablemarkets.com | trader123 |
+| Admin | admin@vantagemarkets.com | admin123 |
+| Trader | trader@vantagemarkets.com | trader123 |
 
 These credentials are seeded by `database.sql`. Change them immediately in production.
 
@@ -597,7 +597,7 @@ These credentials are seeded by `database.sql`. Change them immediately in produ
 |---|---|---|
 | `DB_HOST` | `localhost` | MySQL host |
 | `DB_PORT` | `3306` | MySQL port |
-| `DB_NAME` | `ablemarkets` | Database name |
+| `DB_NAME` | `vantagemarkets` | Database name |
 | `DB_USER` | `root` | Database username |
 | `DB_PASSWORD` | — | Database password |
 | `JWT_SECRET` | — | HS256 signing secret (min 32 chars) |
@@ -655,6 +655,23 @@ A `docker-compose.yml` can be added to orchestrate PHP-FPM, Nginx, and MySQL con
 - Add rate limiting to `/auth/login` (e.g. via Nginx `limit_req` or a middleware layer).
 - Implement email verification using a transactional email provider (Mailgun, SendGrid).
 - Add a token blacklist (Redis) if immediate JWT revocation is required on logout.
+
+---
+
+## 16. Mock Integrations
+
+To facilitate rapid development and demonstration, certain third-party services are mocked in this version:
+
+### KYC Document Storage (Cloudinary Mock)
+Located in `backend/api/kyc/KYCController.php`. In a production environment, the `uploadToCloudinary` method should be updated with your Cloudinary Cloud Name and API Key. The current implementation simulates a successful secure URL return.
+
+### Crypto Payments (Coinbase Commerce Mock)
+Located in `backend/api/payments/PaymentController.php`. The `createCoinbaseCharge` method simulates the creation of a cryptocurrency charge. Replace the mock logic with the Coinbase Commerce SDK and provide your `COINBASE_API_KEY` in the `.env` file.
+
+### Real-Time Market Data (Finnhub/TradingView)
+The frontend uses mock data for charts and tickers in `frontend/src/data/mockData.js`. For live production data:
+- Integrate the **Finnhub.io WebSocket API** for the price ticker.
+- Use the **TradingView Lightweight Charts** library or the full **Technical Analysis Charts** embed for the Web Terminal.
 
 ---
 

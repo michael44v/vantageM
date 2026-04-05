@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace AbleMarkets\Utils;
+namespace VantageMarkets\Utils;
 
 /**
  * Response — Standardised JSON response helper.

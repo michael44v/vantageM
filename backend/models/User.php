@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace AbleMarkets\Models;
+namespace VantageMarkets\Models;
 
-use AbleMarkets\Config\Database;
+use VantageMarkets\Config\Database;
 use PDO;
 
 /**
@@ -56,7 +56,7 @@ final class User
         $params[':offset'] = $offset;
 
         $stmt = $this->db->prepare(
-            "SELECT id, name, email, country, account_type, balance, status, created_at
+            "SELECT id, name, email, country, wallet_balance, status, created_at
              FROM users
              {$whereClause}
              ORDER BY created_at DESC
@@ -90,7 +90,7 @@ final class User
     public function findById(int $id): ?array
     {
         $stmt = $this->db->prepare(
-            'SELECT id, name, email, country, account_type, balance, status, created_at
+            'SELECT id, name, email, country, wallet_balance, status, created_at
              FROM users WHERE id = :id LIMIT 1'
         );
         $stmt->execute([':id' => $id]);
@@ -106,7 +106,7 @@ final class User
     public function findByEmail(string $email): ?array
     {
         $stmt = $this->db->prepare(
-            'SELECT id, name, email, password_hash, role, status, account_type
+            'SELECT id, name, email, password_hash, role, status, wallet_balance
              FROM users WHERE email = :email LIMIT 1'
         );
         $stmt->execute([':email' => strtolower(trim($email))]);
@@ -126,8 +126,8 @@ final class User
     public function create(array $data): int
     {
         $stmt = $this->db->prepare(
-            'INSERT INTO users (name, email, password_hash, phone, country, account_type, role, status)
-             VALUES (:name, :email, :password_hash, :phone, :country, :account_type, :role, :status)'
+            'INSERT INTO users (name, email, password_hash, phone, country, role, status)
+             VALUES (:name, :email, :password_hash, :phone, :country, :role, :status)'
         );
 
         $stmt->execute([
@@ -136,7 +136,6 @@ final class User
             ':password_hash' => password_hash($data['password'], PASSWORD_BCRYPT, ['cost' => 12]),
             ':phone'         => $data['phone'] ?? null,
             ':country'       => $data['country'] ?? null,
-            ':account_type'  => $data['account_type'] ?? 'standard',
             ':role'          => 'trader',
             ':status'        => 'pending',
         ]);
@@ -151,7 +150,7 @@ final class User
      */
     public function update(int $id, array $data): bool
     {
-        $allowed = ['name', 'phone', 'country', 'account_type', 'status'];
+        $allowed = ['name', 'phone', 'country', 'status', 'wallet_balance'];
         $sets    = [];
         $params  = [':id' => $id];
 

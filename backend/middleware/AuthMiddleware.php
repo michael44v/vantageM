@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace AbleMarkets\Middleware;
+namespace VantageMarkets\Middleware;
 
-use AbleMarkets\Utils\Response;
+use VantageMarkets\Utils\Response;
 
 /**
  * AuthMiddleware — Validates Bearer JWT tokens on protected routes.
@@ -19,7 +19,7 @@ final class AuthMiddleware
 
     public function __construct()
     {
-        $this->secret = $_ENV['JWT_SECRET'] ?? 'ablemarkets_jwt_secret_change_in_production';
+        $this->secret = $_ENV['JWT_SECRET'] ?? 'vantagemarkets_jwt_secret_change_in_production';
     }
 
     /**

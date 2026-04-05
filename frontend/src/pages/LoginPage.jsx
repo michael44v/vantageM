@@ -42,7 +42,7 @@ export default function LoginPage() {
               <path d="M10 2L3 7v6l7 5 7-5V7L10 2zm0 2.5l5 3.5v4L10 15 5 12V8l5-3.5z" />
             </svg>
           </div>
-          <span className="font-display font-extrabold text-xl text-white">ABle Markets</span>
+          <span className="font-display font-extrabold text-xl text-white">Vantage Markets</span>
         </Link>
 
         <div className="relative z-10">
@@ -68,8 +68,8 @@ export default function LoginPage() {
         </div>
 
         <p className="text-xs text-white/25 relative z-10">
-          Demo credentials — Trader: trader@ablemarkets.com / trader123<br />
-          Admin: admin@ablemarkets.com / admin123
+          Demo credentials — Trader: trader@vantagemarkets.com / trader123<br />
+          Admin: admin@vantagemarkets.com / admin123
         </p>
       </div>
 
@@ -81,7 +81,7 @@ export default function LoginPage() {
             <div className="w-8 h-8 bg-accent rounded-[8px] flex items-center justify-center">
               <svg viewBox="0 0 20 20" className="w-4 h-4 fill-white"><path d="M10 2L3 7v6l7 5 7-5V7L10 2zm0 2.5l5 3.5v4L10 15 5 12V8l5-3.5z" /></svg>
             </div>
-            <span className="font-display font-extrabold text-lg text-primary">ABle Markets</span>
+            <span className="font-display font-extrabold text-lg text-primary">Vantage Markets</span>
           </Link>
 
           <div className="bg-white border border-surface-border rounded-xl p-10 shadow-card">

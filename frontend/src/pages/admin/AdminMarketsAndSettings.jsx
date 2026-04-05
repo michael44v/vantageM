@@ -92,8 +92,8 @@ export function AdminSettings() {
           <h3 className="font-display font-bold text-base text-primary mb-5">Platform Settings</h3>
           <div className="space-y-5">
             {[
-              { label: "Site Name", value: "ABle Markets" },
-              { label: "Support Email", value: "support@ablemarkets.com" },
+              { label: "Site Name", value: "Vantage Markets" },
+              { label: "Support Email", value: "support@vantagemarkets.com" },
               { label: "Default Currency", value: "USD" },
               { label: "Min Deposit (USD)", value: "50" },
             ].map((f) => (
@@ -115,7 +115,7 @@ export function AdminSettings() {
           <div className="space-y-5">
             {[
               { label: "Full Name", value: "Admin User" },
-              { label: "Email Address", value: "admin@ablemarkets.com" },
+              { label: "Email Address", value: "admin@vantagemarkets.com" },
               { label: "Role", value: "Super Admin" },
             ].map((f) => (
               <div key={f.label}>

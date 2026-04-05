@@ -17,7 +17,7 @@ const allPromos = [
   },
   {
     id: "rewards",
-    title: "ABle Rewards Program",
+    title: "Vantage Rewards Program",
     subtitle: "Points for every trade",
     highlight: "Earn Points",
     description: "Earn reward points for every trade and platform interaction. Redeem points for cash credits, trading vouchers, and exclusive gifts.",
@@ -118,7 +118,7 @@ export default function PromotionsPage() {
           {/* T&C */}
           <div className="mt-10 bg-surface border border-surface-border rounded-[12px] px-5 py-4 text-xs text-[#8897A9] leading-relaxed">
             <span className="font-bold text-[#4A5568]">Terms and Conditions Apply: </span>
-            All promotions are subject to ABle Markets terms and conditions. Bonuses may carry trading volume requirements before withdrawal is permitted. Promotions cannot be combined unless explicitly stated. ABle Markets reserves the right to modify or withdraw any promotion at any time without prior notice. Please read the full terms on each promotion page before participating.
+            All promotions are subject to Vantage Markets terms and conditions. Bonuses may carry trading volume requirements before withdrawal is permitted. Promotions cannot be combined unless explicitly stated. Vantage Markets reserves the right to modify or withdraw any promotion at any time without prior notice. Please read the full terms on each promotion page before participating.
           </div>
         </div>
       </section>

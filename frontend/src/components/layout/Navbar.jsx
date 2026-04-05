@@ -44,7 +44,7 @@ export default function Navbar() {
                 <path d="M10 2L3 7v6l7 5 7-5V7L10 2zm0 2.5l5 3.5v4L10 15 5 12V8l5-3.5z" />
               </svg>
             </div>
-            <span className="font-display font-extrabold text-xl text-primary">ABle Markets</span>
+            <span className="font-display font-extrabold text-xl text-primary">Vantage Markets</span>
           </Link>
 
           {/* Desktop nav */}

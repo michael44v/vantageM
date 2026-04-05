@@ -4,19 +4,19 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        display: ["'Syne'", "sans-serif"],
-        body: ["'DM Sans'", "sans-serif"],
+        display: ["'Inter'", "system-ui", "-apple-system", "sans-serif"],
+        body: ["'Inter'", "system-ui", "-apple-system", "sans-serif"],
       },
       colors: {
         primary: {
-          DEFAULT: "#0B1E3D",
-          light: "#1a3560",
-          dark: "#071428",
+          DEFAULT: "#111111", // Vantage Black
+          light: "#222222",
+          dark: "#000000",
         },
         accent: {
-          DEFAULT: "#E8500A",
-          light: "#FF6B35",
-          dark: "#c43e00",
+          DEFAULT: "#FFC800", // Vantage Gold/Yellow
+          light: "#FFD733",
+          dark: "#CCA000",
         },
         teal: {
           DEFAULT: "#00B4A6",
@@ -24,13 +24,13 @@ export default {
           dark: "#008a80",
         },
         gold: {
-          DEFAULT: "#F5A623",
-          light: "#ffcc55",
+          DEFAULT: "#FFC800",
+          light: "#FFD733",
         },
         surface: {
-          DEFAULT: "#F4F6FA",
-          mid: "#EEF1F8",
-          border: "#DDE3EE",
+          DEFAULT: "#F8F8F8",
+          mid: "#EEEEEE",
+          border: "#E0E0E0",
         },
       },
       boxShadow: {

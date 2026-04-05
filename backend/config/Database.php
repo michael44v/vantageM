@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace AbleMarkets\Config;
+namespace VantageMarkets\Config;
 
 use PDO;
 use PDOException;
@@ -22,7 +22,7 @@ final class Database
     {
         $host     = $_ENV['DB_HOST']     ?? 'localhost';
         $port     = $_ENV['DB_PORT']     ?? '3306';
-        $name     = $_ENV['DB_NAME']     ?? 'ablemarkets';
+        $name     = $_ENV['DB_NAME']     ?? 'vantagemarkets';
         $user     = $_ENV['DB_USER']     ?? 'root';
         $password = $_ENV['DB_PASSWORD'] ?? '';
         $charset  = 'utf8mb4';

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace AbleMarkets\Models;
+namespace VantageMarkets\Models;
 
-use AbleMarkets\Config\Database;
+use VantageMarkets\Config\Database;
 use PDO;
 
 /**
@@ -123,18 +123,22 @@ final class Transaction
     public function create(array $data): int
     {
         $stmt = $this->db->prepare(
-            'INSERT INTO transactions (user_id, reference, type, amount, currency, method, status)
-             VALUES (:user_id, :reference, :type, :amount, :currency, :method, :status)'
+            'INSERT INTO transactions (user_id, reference, type, amount, currency, method, status, receipt_url, tx_hash, from_account_id, to_account_id)
+             VALUES (:user_id, :reference, :type, :amount, :currency, :method, :status, :receipt_url, :tx_hash, :from_account_id, :to_account_id)'
         );
 
         $stmt->execute([
             ':user_id'   => $data['user_id'],
             ':reference' => $data['reference'] ?? $this->generateReference(),
-            ':type'      => $data['type'],       // deposit | withdrawal
+            ':type'      => $data['type'],       // deposit | withdrawal | internal_transfer
             ':amount'    => $data['amount'],
             ':currency'  => $data['currency'] ?? 'USD',
-            ':method'    => $data['method'],
-            ':status'    => 'pending',
+            ':method'    => $data['method'] ?? 'Internal',
+            ':status'    => $data['status'] ?? 'pending',
+            ':receipt_url' => $data['receipt_url'] ?? null,
+            ':tx_hash' => $data['tx_hash'] ?? null,
+            ':from_account_id' => $data['from_account_id'] ?? null,
+            ':to_account_id' => $data['to_account_id'] ?? null,
         ]);
 
         return (int) $this->db->lastInsertId();

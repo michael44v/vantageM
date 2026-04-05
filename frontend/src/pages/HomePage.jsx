@@ -77,7 +77,7 @@ export default function HomePage() {
             </div>
 
             <h1 className="font-display font-extrabold text-5xl lg:text-6xl text-white leading-[1.06] mb-6">
-              ABle Markets<br />
+              Vantage Markets<br />
               <span className="text-accent-light">Ultimate Trading</span><br />
               Machine
             </h1>
@@ -123,16 +123,16 @@ export default function HomePage() {
                 <AreaChart data={earningsChartData}>
                   <defs>
                     <linearGradient id="heroGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#E8500A" stopOpacity={0.3} />
-                      <stop offset="100%" stopColor="#E8500A" stopOpacity={0} />
+                      <stop offset="0%" stopColor="#FFC800" stopOpacity={0.3} />
+                      <stop offset="100%" stopColor="#FFC800" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <XAxis dataKey="month" tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 11 }} axisLine={false} tickLine={false} />
                   <Tooltip
-                    contentStyle={{ background: "#0B1E3D", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, color: "white", fontSize: 12 }}
+                    contentStyle={{ background: "#111111", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, color: "white", fontSize: 12 }}
                     formatter={(v) => [`$${v.toLocaleString()}`, "Value"]}
                   />
-                  <Area dataKey="value" stroke="#E8500A" strokeWidth={2.5} fill="url(#heroGrad)" dot={false} />
+                  <Area dataKey="value" stroke="#FFC800" strokeWidth={2.5} fill="url(#heroGrad)" dot={false} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -185,7 +185,7 @@ export default function HomePage() {
               <div className="text-xs font-semibold uppercase tracking-wider text-white/60">Instrument</div>
               <div className="text-xs font-semibold uppercase tracking-wider text-white flex items-center gap-2 justify-center">
                 <span className="w-2 h-2 rounded-full bg-teal" />
-                ABle Markets
+                Vantage Markets
               </div>
               <div className="text-xs font-semibold uppercase tracking-wider text-white/60 text-right">Market Average</div>
             </div>
@@ -219,14 +219,14 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* WHY ABLE MARKETS */}
+      {/* WHY VANTAGE MARKETS */}
       <section className="py-24 bg-primary relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-teal/10 rounded-full blur-[100px]" />
         </div>
         <div className="max-w-[1200px] mx-auto px-10 relative z-10">
           <div className="text-center mb-16">
-            <p className="section-tag text-teal mb-3">Why ABle Markets</p>
+            <p className="section-tag text-teal mb-3">Why Vantage Markets</p>
             <h2 className="font-display font-extrabold text-4xl text-white mb-4">An Award-Winning Broker</h2>
           </div>
 
@@ -251,7 +251,7 @@ export default function HomePage() {
               {
                 icon: <Shield className="w-7 h-7" />,
                 title: "Trusted CFD Broker",
-                desc: "With over 15 years of experience, ABle Markets has built a reputation as a trusted, regulated CFD broker. Trade 1,000+ products with seamless execution and 24/7 dedicated support.",
+                desc: "With over 15 years of experience, Vantage Markets has built a reputation as a trusted, regulated CFD broker. Trade 1,000+ products with seamless execution and 24/7 dedicated support.",
               },
               {
                 icon: <Zap className="w-7 h-7" />,
@@ -307,7 +307,7 @@ export default function HomePage() {
                 title={<>Trade <span className="text-accent">Anytime, Anywhere</span></>}
               />
               <p className="text-base text-[#4A5568] leading-relaxed mb-4">
-                One of the world's leading CFD brokers with over 15 years of market experience, ABle Markets provides access to 1,000+ CFD products — forex, indices, commodities, shares, ETFs, and bonds.
+                One of the world's leading CFD brokers with over 15 years of market experience, Vantage Markets provides access to 1,000+ CFD products — forex, indices, commodities, shares, ETFs, and bonds.
               </p>
               <p className="text-base text-[#4A5568] leading-relaxed mb-8">
                 Trade from South Africa, Kenya, Nigeria, Botswana or anywhere across the globe using desktop or mobile, powered by MT4, MT5, TradingView, and our proprietary app.
@@ -347,16 +347,16 @@ export default function HomePage() {
                   <AreaChart data={earningsChartData}>
                     <defs>
                       <linearGradient id="tradeGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#E8500A" stopOpacity={0.2} />
-                        <stop offset="100%" stopColor="#E8500A" stopOpacity={0} />
+                        <stop offset="0%" stopColor="#FFC800" stopOpacity={0.2} />
+                        <stop offset="100%" stopColor="#FFC800" stopOpacity={0} />
                       </linearGradient>
                     </defs>
                     <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#8897A9" }} axisLine={false} tickLine={false} />
                     <Tooltip
-                      contentStyle={{ background: "#0B1E3D", border: "none", borderRadius: 8, color: "white", fontSize: 12 }}
+                      contentStyle={{ background: "#111111", border: "none", borderRadius: 8, color: "white", fontSize: 12 }}
                       formatter={(v) => [`$${v.toLocaleString()}`, "Value"]}
                     />
-                    <Area dataKey="value" stroke="#E8500A" strokeWidth={2.5} fill="url(#tradeGrad)" dot={false} />
+                    <Area dataKey="value" stroke="#FFC800" strokeWidth={2.5} fill="url(#tradeGrad)" dot={false} />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>

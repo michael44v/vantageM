@@ -4,22 +4,22 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
-    const stored = localStorage.getItem("ablemarkets_user");
+    const stored = localStorage.getItem("vantagemarkets_user");
     return stored ? JSON.parse(stored) : null;
   });
 
   const login = useCallback((credentials) => {
     // Simulate login — in production this calls PHP API
-    if (credentials.email === "admin@ablemarkets.com" && credentials.password === "admin123") {
+    if (credentials.email === "admin@vantagemarkets.com" && credentials.password === "admin123") {
       const adminUser = { id: 1, name: "Admin User", email: credentials.email, role: "admin" };
       setUser(adminUser);
-      localStorage.setItem("ablemarkets_user", JSON.stringify(adminUser));
+      localStorage.setItem("vantagemarkets_user", JSON.stringify(adminUser));
       return { success: true, role: "admin" };
     }
-    if (credentials.email === "trader@ablemarkets.com" && credentials.password === "trader123") {
+    if (credentials.email === "trader@vantagemarkets.com" && credentials.password === "trader123") {
       const traderUser = { id: 2, name: "Demo Trader", email: credentials.email, role: "trader" };
       setUser(traderUser);
-      localStorage.setItem("ablemarkets_user", JSON.stringify(traderUser));
+      localStorage.setItem("vantagemarkets_user", JSON.stringify(traderUser));
       return { success: true, role: "trader" };
     }
     return { success: false, error: "Invalid email or password." };
@@ -27,7 +27,7 @@ export function AuthProvider({ children }) {
 
   const logout = useCallback(() => {
     setUser(null);
-    localStorage.removeItem("ablemarkets_user");
+    localStorage.removeItem("vantagemarkets_user");
   }, []);
 
   return (
