@@ -20,6 +20,25 @@ export default function TerminalPage() {
   const [lots, setLots] = useState("0.01");
   const [showTradeModal, setShowTradeModal] = useState(false);
 
+  const onTradeExecute = async (tradeData) => {
+    try {
+      const result = await dispatch(executeTrade({
+        tradingAccountId: currentAccount.id,
+        symbol: tradeData.symbol,
+        type: tradeData.type === 'long' ? 'buy' : 'sell',
+        lots: tradeData.lots,
+        price: tradeData.price
+      })).unwrap();
+
+      if (result.success) {
+        setShowTradeModal(false);
+        dispatch(fetchLiveTrades()); // Refresh positions
+      }
+    } catch (err) {
+      alert(err.message || "Trade execution failed.");
+    }
+  };
+
   // Simulation: find account details
   const accounts = [
     { id: 1, number: "8800123", type: "Raw ECN", balance: "5000.00", leverage: 500, status: "Live" },

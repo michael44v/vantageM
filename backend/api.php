@@ -48,6 +48,15 @@ function send_json($data, $status = 200) {
     exit;
 }
 
+// Drop-in helper used by all authenticated actions.
+function get_auth_user_id(): int {
+    $header = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+    if (!str_starts_with($header, 'Bearer ')) return 0;
+    $token = base64_decode(substr($header, 7));
+    $data  = json_decode($token, true);
+    return (int)($data['id'] ?? 0);
+}
+
 // --- 4. Routing ---
 switch ($action) {
     case 'login':
@@ -59,17 +68,11 @@ switch ($action) {
     case 'get_accounts':
         handle_get_accounts($db);
         break;
+    case 'create_account':
+        handle_create_account($db, $input);
+        break;
     case 'get_positions':
         handle_get_positions($db);
-        break;
-    case 'admin_live_trades':
-        handle_admin_live_trades($db);
-        break;
-    case 'upload_kyc':
-        handle_upload_kyc($db);
-        break;
-    case 'deposit':
-        handle_deposit($db, $input);
         break;
     case 'execute_trade':
         handle_execute_trade($db, $input);
@@ -80,11 +83,38 @@ switch ($action) {
     case 'internal_transfer':
         handle_internal_transfer($db, $input);
         break;
+    case 'get_signals':
+        handle_get_signals($db);
+        break;
+    case 'copy_signal':
+        handle_copy_signal($db, $input);
+        break;
+    case 'get_kyc':
+        handle_get_kyc($db);
+        break;
+    case 'upload_kyc':
+        handle_upload_kyc($db);
+        break;
+    case 'deposit':
+        handle_deposit($db, $input);
+        break;
+    case 'admin_live_trades':
+        handle_admin_live_trades($db);
+        break;
+    case 'admin_get_users':
+        handle_admin_get_users($db);
+        break;
+    case 'admin_dashboard_stats':
+        handle_admin_dashboard_stats($db);
+        break;
+    case 'admin_approve_transaction':
+        handle_admin_approve_transaction($db, $input);
+        break;
     default:
         send_json(['success' => false, 'error' => 'Action not found: ' . $action], 404);
 }
 
-// --- 5. Action Handlers (Procedural) ---
+// --- 5. Action Handlers ---
 
 function handle_login($db, $input) {
     $email = $db->real_escape_string($input['email'] ?? '');
@@ -94,7 +124,6 @@ function handle_login($db, $input) {
     $user = $res->fetch_assoc();
 
     if ($user && password_verify($pass, $user['password_hash'])) {
-        // Simple JWT simulation for this procedural version
         $token = base64_encode(json_encode(['id' => $user['id'], 'role' => $user['role']]));
         send_json([
             'success' => true,
@@ -124,9 +153,33 @@ function handle_register($db, $input) {
 }
 
 function handle_get_accounts($db) {
-    // In a real app, you'd extract user_id from token. Here we simulate for user 2.
-    $res = $db->query("SELECT * FROM trading_accounts WHERE user_id = 2");
+    $user_id = get_auth_user_id();
+    if (!$user_id) send_json(['success' => false, 'error' => 'Unauthorized'], 401);
+
+    $res = $db->query("SELECT * FROM trading_accounts WHERE user_id = $user_id");
     send_json(['success' => true, 'data' => $res->fetch_all(MYSQLI_ASSOC)]);
+}
+
+function handle_create_account($db, $input) {
+    $user_id = get_auth_user_id();
+    if (!$user_id) send_json(['success' => false, 'error' => 'Unauthorized'], 401);
+
+    $type = $db->real_escape_string($input['type'] ?? 'standard_stp');
+    $is_demo = (bool)($input['is_demo'] ?? false) ? 1 : 0;
+    $leverage = (int)($input['leverage'] ?? 500);
+
+    do {
+        $acc_number = (string)rand(1000000, 9999999);
+        $exists = $db->query("SELECT id FROM trading_accounts WHERE account_number = '$acc_number' LIMIT 1");
+    } while ($exists->num_rows > 0);
+
+    $sql = "INSERT INTO trading_accounts (user_id, account_number, type, is_demo, balance, leverage, currency, status)
+            VALUES ($user_id, '$acc_number', '$type', $is_demo, 0.00, $leverage, 'USD', 'active')";
+
+    if ($db->query($sql)) {
+        send_json(['success' => true, 'message' => 'Account created']);
+    }
+    send_json(['success' => false, 'error' => $db->error], 500);
 }
 
 function handle_get_positions($db) {
@@ -135,66 +188,33 @@ function handle_get_positions($db) {
     send_json(['success' => true, 'data' => $res->fetch_all(MYSQLI_ASSOC)]);
 }
 
-function handle_admin_live_trades($db) {
-    // Admin function: Get all open positions across all users
-    $sql = "SELECT p.*, u.name as trader_name, a.account_number
-            FROM positions p
-            JOIN users u ON p.user_id = u.id
-            JOIN trading_accounts a ON p.trading_account_id = a.id
-            WHERE p.status = 'open'";
-    $res = $db->query($sql);
-    $trades = $res->fetch_all(MYSQLI_ASSOC);
-
-    // Live calculations (simulated)
-    foreach ($trades as &$t) {
-        // Simulate a small random price movement for "live" feel
-        $move = (rand(-10, 10) / 10000);
-        $t['current_price'] = (float)$t['current_price'] + $move;
-        $t['pnl'] = ($t['type'] === 'long' ? 1 : -1) * ($t['current_price'] - $t['entry_price']) * ($t['lots'] * 100000);
-    }
-
-    send_json(['success' => true, 'data' => $trades]);
-}
-
-function handle_upload_kyc($db) {
-    // Simple file upload logic
-    if (!isset($_FILES['file'])) send_json(['success' => false, 'error' => 'No file']);
-    send_json(['success' => true, 'message' => 'Document received for review']);
-}
-
-function handle_deposit($db, $input) {
-    send_json(['success' => true, 'message' => 'Deposit initiated', 'url' => 'https://commerce.coinbase.com/charges/mock']);
-}
-
 function handle_execute_trade($db, $input) {
-    $user_id = 2; // Simulated auth
+    $user_id = get_auth_user_id();
+    if (!$user_id) send_json(['success' => false, 'error' => 'Unauthorized'], 401);
+
     $acc_id = (int)$input['account_id'];
     $symbol = $db->real_escape_string($input['symbol']);
-    $type = $db->real_escape_string($input['type']); // long/short
+    $type = $db->real_escape_string($input['type']);
     $lots = (float)$input['lots'];
     $price = (float)$input['price'];
 
-    // 1. Get Account Details (Balance & Leverage)
     $res = $db->query("SELECT balance, leverage FROM trading_accounts WHERE id = $acc_id AND user_id = $user_id LIMIT 1");
     $acc = $res->fetch_assoc();
 
     if (!$acc) send_json(['success' => false, 'error' => 'Account not found'], 404);
 
-    // 2. Execution Mathematics (Margin Calculation)
-    // Formula: (Lots * Contract Size * Price) / Leverage
     $contract_size = 100000;
     $required_margin = ($lots * $contract_size * $price) / $acc['leverage'];
 
     if ($acc['balance'] < $required_margin) {
-        send_json(['success' => false, 'error' => 'Insufficient funds in trading account. Please transfer from wallet.'], 400);
+        send_json(['success' => false, 'error' => 'Insufficient funds in trading account.'], 400);
     }
 
-    // 3. Record Position
     $sql = "INSERT INTO positions (user_id, trading_account_id, symbol, type, lots, entry_price, current_price, status)
             VALUES ($user_id, $acc_id, '$symbol', '$type', $lots, $price, $price, 'open')";
 
     if ($db->query($sql)) {
-        send_json(['success' => true, 'message' => 'Order executed successfully', 'trade_id' => $db->insert_id]);
+        send_json(['success' => true, 'message' => 'Order executed successfully']);
     }
     send_json(['success' => false, 'error' => $db->error], 500);
 }
@@ -207,10 +227,12 @@ function handle_update_leverage($db, $input) {
 }
 
 function handle_internal_transfer($db, $input) {
-    $user_id = 2; // Simulated auth
+    $user_id = get_auth_user_id();
+    if (!$user_id) send_json(['success' => false, 'error' => 'Unauthorized'], 401);
+
     $acc_id = (int)$input['account_id'];
     $amount = (float)$input['amount'];
-    $direction = $input['direction']; // wallet_to_acc or acc_to_wallet
+    $direction = $input['direction'];
 
     if ($direction === 'wallet_to_acc') {
         $db->query("UPDATE users SET wallet_balance = wallet_balance - $amount WHERE id = $user_id");
@@ -220,4 +242,85 @@ function handle_internal_transfer($db, $input) {
         $db->query("UPDATE users SET wallet_balance = wallet_balance + $amount WHERE id = $user_id");
     }
     send_json(['success' => true, 'message' => 'Transfer successful']);
+}
+
+function handle_get_signals($db) {
+    $sql = "SELECT s.*, u.name AS provider_name FROM signals s JOIN users u ON s.user_id = u.id WHERE s.status = 'active'";
+    $res = $db->query($sql);
+    send_json(['success' => true, 'data' => $res->fetch_all(MYSQLI_ASSOC)]);
+}
+
+function handle_copy_signal($db, $input) {
+    $copier_id = get_auth_user_id();
+    $provider_id = (int)($input['provider_id'] ?? 0);
+    $trading_account_id = (int)($input['trading_account_id'] ?? 0);
+    $risk_multiplier = (float)($input['risk_multiplier'] ?? 1.0);
+
+    $sql = "INSERT INTO copy_relationships (copier_id, provider_id, trading_account_id, risk_multiplier, status)
+            VALUES ($copier_id, $provider_id, $trading_account_id, $risk_multiplier, 'active')";
+
+    if ($db->query($sql)) {
+        send_json(['success' => true, 'message' => 'Copying provider']);
+    }
+    send_json(['success' => false, 'error' => $db->error], 500);
+}
+
+function handle_get_kyc($db) {
+    $user_id = get_auth_user_id();
+    $res = $db->query("SELECT * FROM kyc_documents WHERE user_id = $user_id");
+    send_json(['success' => true, 'data' => $res->fetch_all(MYSQLI_ASSOC)]);
+}
+
+function handle_upload_kyc($db) {
+    $user_id = get_auth_user_id();
+    $doc_type = $db->real_escape_string($_POST['document_type'] ?? 'identity');
+    $file_url = $db->real_escape_string($_POST['file_url'] ?? '');
+
+    $sql = "INSERT INTO kyc_documents (user_id, document_type, file_url, status)
+            VALUES ($user_id, '$doc_type', '$file_url', 'pending')";
+    if ($db->query($sql)) {
+        send_json(['success' => true, 'message' => 'Document uploaded']);
+    }
+    send_json(['success' => false, 'error' => $db->error], 500);
+}
+
+function handle_deposit($db, $input) {
+    send_json(['success' => true, 'message' => 'Deposit initiated', 'url' => 'https://commerce.coinbase.com/charges/mock']);
+}
+
+function handle_admin_live_trades($db) {
+    $sql = "SELECT p.*, u.name as trader_name, a.account_number
+            FROM positions p
+            JOIN users u ON p.user_id = u.id
+            JOIN trading_accounts a ON p.trading_account_id = a.id
+            WHERE p.status = 'open'";
+    $res = $db->query($sql);
+    $trades = $res->fetch_all(MYSQLI_ASSOC);
+
+    foreach ($trades as &$t) {
+        $move = (rand(-10, 10) / 10000);
+        $t['current_price'] = (float)$t['current_price'] + $move;
+        $t['pnl'] = ($t['type'] === 'long' ? 1 : -1) * ($t['current_price'] - $t['entry_price']) * ($t['lots'] * 100000);
+    }
+    send_json(['success' => true, 'data' => $trades]);
+}
+
+function handle_admin_get_users($db) {
+    $res = $db->query("SELECT id, name, email, country, wallet_balance, status, role, created_at FROM users");
+    send_json(['success' => true, 'data' => $res->fetch_all(MYSQLI_ASSOC)]);
+}
+
+function handle_admin_dashboard_stats($db) {
+    $stats = [
+        'total_users' => (int)$db->query("SELECT COUNT(*) c FROM users WHERE role='trader'")->fetch_assoc()['c'],
+        'open_positions' => (int)$db->query("SELECT COUNT(*) c FROM positions WHERE status='open'")->fetch_assoc()['c'],
+        'pending_kyc' => (int)$db->query("SELECT COUNT(*) c FROM kyc_documents WHERE status='pending'")->fetch_assoc()['c']
+    ];
+    send_json(['success' => true, 'data' => $stats]);
+}
+
+function handle_admin_approve_transaction($db, $input) {
+    $txn_id = (int)$input['transaction_id'];
+    $db->query("UPDATE transactions SET status = 'completed' WHERE id = $txn_id");
+    send_json(['success' => true, 'message' => 'Transaction approved']);
 }

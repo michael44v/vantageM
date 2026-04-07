@@ -11,32 +11,25 @@ export function AuthProvider({ children }) {
 
   const login = useCallback(async (credentials) => {
     try {
-      // For demonstration, we still allow demo login to bypass actual API if needed
-      // But we show how to call the authService.login endpoint:
-      /*
       const response = await authService.login(credentials);
       if (response.success) {
-        setUser(response.data.user);
-        localStorage.setItem("vantagemarkets_user", JSON.stringify(response.data.user));
-        return { success: true, role: response.data.user.role };
+        const userData = { ...response.user, token: response.token };
+        setUser(userData);
+        localStorage.setItem("vantagemarkets_user", JSON.stringify(userData));
+        return { success: true, role: response.user.role };
       }
-      */
-
-      if (credentials.email === "admin@vantagemarkets.com" && credentials.password === "admin123") {
-        const adminUser = { id: 1, name: "Admin User", email: credentials.email, role: "admin" };
-        setUser(adminUser);
-        localStorage.setItem("vantagemarkets_user", JSON.stringify(adminUser));
-        return { success: true, role: "admin" };
-      }
-      if (credentials.email === "trader@vantagemarkets.com" && credentials.password === "trader123") {
-        const traderUser = { id: 2, name: "Demo Trader", email: credentials.email, role: "trader" };
-        setUser(traderUser);
-        localStorage.setItem("vantagemarkets_user", JSON.stringify(traderUser));
-        return { success: true, role: "trader" };
-      }
-      return { success: false, error: "Invalid email or password." };
+      return { success: false, error: response.error || "Login failed." };
     } catch (err) {
       return { success: false, error: err.message || "Login failed." };
+    }
+  }, []);
+
+  const register = useCallback(async (formData) => {
+    try {
+      const response = await authService.register(formData);
+      return response;
+    } catch (err) {
+      throw err;
     }
   }, []);
 
@@ -46,7 +39,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAdmin: user?.role === "admin" }}>
+    <AuthContext.Provider value={{ user, login, logout, register, isAdmin: user?.role === "admin" }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, NavLink, useNavigate, Outlet } from "react-router-dom";
 import {
-  LayoutDashboard, Users, ArrowLeftRight, TrendingUp,
+  LayoutDashboard, Users, ArrowLeftRight, TrendingUp, Activity,
   Bell, Settings, LogOut, Menu, X, ChevronRight, ShieldCheck,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";

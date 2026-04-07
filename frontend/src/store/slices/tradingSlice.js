@@ -1,21 +1,14 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import { adminService, tradingService } from "../../services/api";
 
 export const fetchLiveTrades = createAsyncThunk("trading/fetchLiveTrades", async () => {
-  const response = await fetch("http://localhost:8000/api.php?action=admin_live_trades");
-  const result = await response.json();
-  if (result.success) return result.data;
-  throw new Error(result.error);
+  const result = await adminService.getLiveTrades();
+  return result.data;
 });
 
 export const executeTrade = createAsyncThunk("trading/executeTrade", async (tradeData) => {
-  const response = await fetch("http://localhost:8000/api.php?action=execute_trade", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(tradeData),
-  });
-  const result = await response.json();
-  if (result.success) return result;
-  throw new Error(result.error);
+  const result = await tradingService.execute(tradeData);
+  return result;
 });
 
 const tradingSlice = createSlice({
