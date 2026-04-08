@@ -18,6 +18,6 @@ export function RequireAdmin({ children }) {
 
 export function RedirectIfAuth({ children }) {
   const { user } = useAuth();
-  if (user) return <Navigate to={user.role === "admin" ? "/admin" : "/"} replace />;
+  if (user) return <Navigate to={user.role === "admin" ? "/admin" : "/dashboard"} replace />;
   return children;
 }

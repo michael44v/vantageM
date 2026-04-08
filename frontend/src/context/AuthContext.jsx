@@ -6,6 +6,7 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
     const stored = localStorage.getItem("vantagemarkets_user");
+    //const stored = localStorage.getItem("vm_token");
     return stored ? JSON.parse(stored) : null;
   });
 
@@ -13,14 +14,14 @@ export function AuthProvider({ children }) {
     try {
       // For demonstration, we still allow demo login to bypass actual API if needed
       // But we show how to call the authService.login endpoint:
-      /*
+      
       const response = await authService.login(credentials);
       if (response.success) {
-        setUser(response.data.user);
-        localStorage.setItem("vantagemarkets_user", JSON.stringify(response.data.user));
-        return { success: true, role: response.data.user.role };
+        setUser(response.user);
+        localStorage.setItem("vantagemarkets_user", JSON.stringify(response.user));
+        return { success: true, role: response.user.role };
       }
-      */
+      
 
       if (credentials.email === "admin@vantagemarkets.com" && credentials.password === "admin123") {
         const adminUser = { id: 1, name: "Admin User", email: credentials.email, role: "admin" };
@@ -31,7 +32,7 @@ export function AuthProvider({ children }) {
       if (credentials.email === "trader@vantagemarkets.com" && credentials.password === "trader123") {
         const traderUser = { id: 2, name: "Demo Trader", email: credentials.email, role: "trader" };
         setUser(traderUser);
-        localStorage.setItem("vantagemarkets_user", JSON.stringify(traderUser));
+        localStorage.setItem("vm_token", JSON.stringify(traderUser));
         return { success: true, role: "trader" };
       }
       return { success: false, error: "Invalid email or password." };

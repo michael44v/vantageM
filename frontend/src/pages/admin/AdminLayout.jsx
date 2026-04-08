@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, NavLink, useNavigate, Outlet } from "react-router-dom";
 import {
   LayoutDashboard, Users, ArrowLeftRight, TrendingUp,
-  Bell, Settings, LogOut, Menu, X, ChevronRight, ShieldCheck,
+  Bell, Settings, LogOut, Menu, X, ChevronRight, ShieldCheck,Activity,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
