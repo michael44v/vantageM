@@ -96,6 +96,12 @@ export const accountService = {
   getAll: () => req("get_accounts"),
 
   /**
+   * POST ?action=create_account
+   * Payload: { type, is_demo, leverage }
+   */
+  create: (payload) => req("create_account", { method: "POST", body: payload }),
+
+  /**
    * POST ?action=internal_transfer
    * PHP payload: { account_id, amount, direction }
    *

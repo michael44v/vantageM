@@ -1,6 +1,6 @@
-import { useState } from "react";
-import { Search, Filter, MoreHorizontal, Eye, Ban, Trash2 } from "lucide-react";
-import { adminUsers } from "../../data/mockData";
+import { useState, useEffect } from "react";
+import { Search, Filter, MoreHorizontal, Eye, Ban, Trash2, Loader2 } from "lucide-react";
+import { adminService } from "../../services/api";
 import { Badge, Input } from "../../components/ui";
 
 function statusVariant(s) {
@@ -11,7 +11,24 @@ export default function AdminUsers() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [selected, setSelected] = useState(null);
-  const [users, setUsers] = useState(adminUsers);
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    setLoading(true);
+    try {
+      const res = await adminService.getUsers();
+      setUsers(res.data);
+    } catch (err) {
+      console.error("Failed to fetch users:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filtered = users.filter((u) => {
     const matchSearch =
@@ -82,7 +99,13 @@ export default function AdminUsers() {
               </tr>
             </thead>
             <tbody className="divide-y divide-surface-border">
-              {filtered.map((u) => (
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="px-5 py-12 text-center">
+                    <Loader2 className="w-6 h-6 animate-spin mx-auto text-accent" />
+                  </td>
+                </tr>
+              ) : filtered.map((u) => (
                 <tr key={u.id} className="hover:bg-surface/50 transition-colors group">
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-3">
@@ -97,11 +120,11 @@ export default function AdminUsers() {
                   </td>
                   <td className="px-5 py-4 text-sm text-[#4A5568]">{u.country}</td>
                   <td className="px-5 py-4">
-                    <span className="text-xs font-semibold text-primary bg-surface border border-surface-border px-2.5 py-1 rounded-full">
-                      {u.account}
+                    <span className="text-xs font-semibold text-primary bg-surface border border-surface-border px-2.5 py-1 rounded-full capitalize">
+                      {u.role}
                     </span>
                   </td>
-                  <td className="px-5 py-4 font-semibold text-primary text-sm">{u.balance}</td>
+                  <td className="px-5 py-4 font-semibold text-primary text-sm">${parseFloat(u.wallet_balance).toLocaleString()}</td>
                   <td className="px-5 py-4">
                     <Badge variant={statusVariant(u.status)}>{u.status}</Badge>
                   </td>

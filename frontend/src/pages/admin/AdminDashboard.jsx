@@ -1,5 +1,7 @@
-import { Users, DollarSign, TrendingUp, Clock, ArrowUpRight, ArrowDownRight } from "lucide-react";
-import { adminStats, adminTransactions, adminUsers, earningsChartData } from "../../data/mockData";
+import { useState, useEffect } from "react";
+import { Users, DollarSign, TrendingUp, Clock, ArrowUpRight, ArrowDownRight, Loader2 } from "lucide-react";
+import { adminTransactions, adminUsers, earningsChartData } from "../../data/mockData";
+import { adminService } from "../../services/api";
 import { Badge } from "../../components/ui";
 import {
   ResponsiveContainer, AreaChart, Area, BarChart, Bar,
@@ -61,6 +63,70 @@ function statusVariant(status) {
 }
 
 export default function AdminDashboard() {
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await adminService.getDashboardStats();
+        setStats(res.data);
+      } catch (err) {
+        console.error("Failed to fetch dashboard stats:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchStats();
+  }, []);
+
+  const statCards = [
+    {
+      label: "Total Users",
+      value: stats?.total_users?.toLocaleString() || "0",
+      sub: "+124 this week",
+      up: true,
+      icon: Users,
+      color: "text-teal",
+      bg: "bg-teal/10",
+    },
+    {
+      label: "Total Deposits",
+      value: "$" + (stats?.total_deposits?.toLocaleString() || "0"),
+      sub: "+$186,400 today",
+      up: true,
+      icon: DollarSign,
+      color: "text-accent",
+      bg: "bg-accent/10",
+    },
+    {
+      label: "Monthly Volume",
+      value: stats?.total_accounts?.toLocaleString() || "0",
+      sub: "Total Accounts",
+      up: true,
+      icon: TrendingUp,
+      color: "text-primary",
+      bg: "bg-primary/10",
+    },
+    {
+      label: "Pending KYC",
+      value: stats?.pending_kyc?.toLocaleString() || "0",
+      sub: "Require approval",
+      up: false,
+      icon: Clock,
+      color: "text-amber-500",
+      bg: "bg-amber-50",
+    },
+  ];
+
+  if (loading) {
+    return (
+      <div className="h-full flex items-center justify-center p-20">
+        <Loader2 className="w-10 h-10 animate-spin text-accent" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -141,11 +207,11 @@ export default function AdminDashboard() {
           </ResponsiveContainer>
           <div className="mt-4 pt-4 border-t border-surface-border grid grid-cols-2 gap-4">
             <div>
-              <div className="font-display font-bold text-xl text-primary">{adminStats.totalUsers.toLocaleString()}</div>
+              <div className="font-display font-bold text-xl text-primary">{stats?.total_users.toLocaleString()}</div>
               <div className="text-xs text-[#8897A9]">Total Users</div>
             </div>
             <div>
-              <div className="font-display font-bold text-xl text-teal">{adminStats.activeTraders.toLocaleString()}</div>
+              <div className="font-display font-bold text-xl text-teal">{stats?.active_users.toLocaleString()}</div>
               <div className="text-xs text-[#8897A9]">Active Traders</div>
             </div>
           </div>

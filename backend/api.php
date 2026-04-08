@@ -148,8 +148,9 @@ function handle_register($db, $input) {
 }
 
 function handle_get_accounts($db) {
-    // In a real app, you'd extract user_id from token. Here we simulate for user 2.
-    $res = $db->query("SELECT * FROM trading_accounts WHERE user_id = 2");
+    $user_id = get_auth_user_id();
+    if (!$user_id) send_json(['success' => false, 'error' => 'Unauthorized'], 401);
+    $res = $db->query("SELECT * FROM trading_accounts WHERE user_id = $user_id");
     send_json(['success' => true, 'data' => $res->fetch_all(MYSQLI_ASSOC)]);
 }
 
@@ -191,7 +192,8 @@ function handle_deposit($db, $input) {
 }
 
 function handle_execute_trade($db, $input) {
-    $user_id = 2; // Simulated auth
+    $user_id = get_auth_user_id();
+    if (!$user_id) send_json(['success' => false, 'error' => 'Unauthorized'], 401);
     $acc_id = (int)$input['account_id'];
     $symbol = $db->real_escape_string($input['symbol']);
     $type = $db->real_escape_string($input['type']); // long/short
@@ -231,7 +233,8 @@ function handle_update_leverage($db, $input) {
 }
 
 function handle_internal_transfer($db, $input) {
-    $user_id = 2; // Simulated auth
+    $user_id = get_auth_user_id();
+    if (!$user_id) send_json(['success' => false, 'error' => 'Unauthorized'], 401);
     $acc_id = (int)$input['account_id'];
     $amount = (float)$input['amount'];
     $direction = $input['direction']; // wallet_to_acc or acc_to_wallet
