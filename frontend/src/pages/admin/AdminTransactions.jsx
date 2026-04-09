@@ -1,26 +1,44 @@
-import { useState } from "react";
-import { Search, Check, X } from "lucide-react";
-import { adminTransactions } from "../../data/mockData";
+import { useState, useEffect } from "react";
+import { Search, Check, X, Loader2 } from "lucide-react";
+import { adminService } from "../../services/api";
 import { Badge } from "../../components/ui";
 
-const extra = [
-  { id: "TXN-00416", user: "Priya Nair", type: "Deposit", amount: "$800", method: "Credit Card", status: "Completed", date: "2024-03-30" },
-  { id: "TXN-00415", user: "James Okonkwo", type: "Withdrawal", amount: "$2,500", method: "Bank Wire", status: "Rejected", date: "2024-03-29" },
-  { id: "TXN-00414", user: "Mikael Johansson", type: "Deposit", amount: "$4,000", method: "Bank Wire", status: "Completed", date: "2024-03-28" },
-];
-
 function statusVariant(s) {
-  return { Completed: "success", Pending: "warning", Processing: "neutral", Rejected: "danger" }[s] || "neutral";
+  const map = { completed: "success", pending: "warning", processing: "neutral", rejected: "danger" };
+  return map[s.toLowerCase()] || "neutral";
 }
 
 export default function AdminTransactions() {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
-  const [txns, setTxns] = useState([...adminTransactions, ...extra]);
+  const [txns, setTxns] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const approve = (id) => setTxns((prev) => prev.map((t) => t.id === id ? { ...t, status: "Completed" } : t));
-  const reject = (id) => setTxns((prev) => prev.map((t) => t.id === id ? { ...t, status: "Rejected" } : t));
+  useEffect(() => {
+    fetchTransactions();
+  }, []);
+
+  const fetchTransactions = async () => {
+    try {
+      const res = await adminService.getAllTransactions();
+      setTxns(res.data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const approve = async (id) => {
+    try {
+      await adminService.approveTransaction(id);
+      alert("Transaction approved.");
+      fetchTransactions();
+    } catch (err) {
+      alert("Failed: " + err.message);
+    }
+  };
 
   const filtered = txns.filter((t) => {
     const matchSearch = t.user.toLowerCase().includes(search.toLowerCase()) || t.id.toLowerCase().includes(search.toLowerCase());
@@ -92,21 +110,27 @@ export default function AdminTransactions() {
               </tr>
             </thead>
             <tbody className="divide-y divide-surface-border">
-              {filtered.map((tx) => (
+              {loading ? (
+                <tr>
+                  <td colSpan="8" className="px-5 py-12 text-center">
+                    <Loader2 className="w-6 h-6 animate-spin mx-auto text-accent" />
+                  </td>
+                </tr>
+              ) : filtered.map((tx) => (
                 <tr key={tx.id} className="hover:bg-surface/50 transition-colors group">
-                  <td className="px-5 py-4 font-mono text-xs font-bold text-primary">{tx.id}</td>
-                  <td className="px-5 py-4 text-sm font-semibold text-primary">{tx.user}</td>
+                  <td className="px-5 py-4 font-mono text-xs font-bold text-primary">{tx.reference}</td>
+                  <td className="px-5 py-4 text-sm font-semibold text-primary">{tx.user_name}</td>
                   <td className="px-5 py-4">
-                    <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${tx.type === "Deposit" ? "bg-teal/10 text-teal" : "bg-accent/10 text-accent"}`}>
+                    <span className={`text-xs font-bold px-2.5 py-1 rounded-full capitalize ${tx.type === "deposit" ? "bg-teal/10 text-teal" : "bg-accent/10 text-accent"}`}>
                       {tx.type}
                     </span>
                   </td>
-                  <td className="px-5 py-4 font-display font-bold text-sm text-primary">{tx.amount}</td>
-                  <td className="px-5 py-4 text-xs text-[#4A5568]">{tx.method}</td>
+                  <td className="px-5 py-4 font-display font-bold text-sm text-primary">${parseFloat(tx.amount).toLocaleString()}</td>
+                  <td className="px-5 py-4 text-xs text-[#4A5568] capitalize">{tx.method}</td>
                   <td className="px-5 py-4"><Badge variant={statusVariant(tx.status)}>{tx.status}</Badge></td>
-                  <td className="px-5 py-4 text-xs text-[#8897A9]">{tx.date}</td>
+                  <td className="px-5 py-4 text-xs text-[#8897A9]">{new Date(tx.created_at).toLocaleDateString()}</td>
                   <td className="px-5 py-4">
-                    {(tx.status === "Pending" || tx.status === "Processing") && (
+                    {(tx.status === "pending" || tx.status === "processing") && (
                       <div className="flex items-center gap-1.5">
                         <button
                           onClick={() => approve(tx.id)}

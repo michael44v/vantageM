@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchLiveTrades, executeTrade } from "../store/slices/tradingSlice";
+import { accountService } from "../services/api";
 import TradeModal from "../components/terminal/TradeModal";
 import {
   TrendingUp, TrendingDown, Clock, Search,
@@ -15,18 +16,28 @@ export default function TerminalPage() {
   const { liveTrades, loading } = useSelector((state) => state.trading);
   const { user } = useAuth();
   const [selectedAccount, setSelectedAccount] = useState("");
+  const [accounts, setAccounts] = useState([]);
+  const [accountsLoading, setAccountsLoading] = useState(true);
   const [activeSymbol, setActiveSymbol] = useState("EUR/USD");
   const [orderType, setOrderType] = useState("market");
   const [lots, setLots] = useState("0.01");
   const [showTradeModal, setShowTradeModal] = useState(false);
 
-  // Simulation: find account details
-  const accounts = [
-    { id: 1, number: "8800123", type: "Raw ECN", balance: "5000.00", leverage: 500, status: "Live" },
-    { id: 2, number: "9900456", type: "Standard STP", balance: "10000.00", leverage: 500, status: "Demo" },
-  ];
+  useEffect(() => {
+    const fetchAccounts = async () => {
+      try {
+        const res = await accountService.getAll();
+        setAccounts(res.data);
+      } catch (err) {
+        console.error("Failed to fetch accounts:", err);
+      } finally {
+        setAccountsLoading(false);
+      }
+    };
+    fetchAccounts();
+  }, []);
 
-  const currentAccount = accounts.find(a => a.number === selectedAccount);
+  const currentAccount = accounts.find(a => a.account_number === selectedAccount);
 
   const symbols = [
     { name: "EUR/USD", price: "1.08542", change: "+0.12%", up: true },
@@ -46,6 +57,23 @@ export default function TerminalPage() {
     }
   }, [selectedAccount, dispatch]);
 
+  const onTradeExecute = async (data) => {
+    try {
+      await dispatch(executeTrade({
+        account_id: currentAccount.id,
+        symbol: data.symbol,
+        type: data.type,
+        lots: data.lots,
+        price: data.price
+      })).unwrap();
+      alert("Trade executed successfully!");
+      setShowTradeModal(false);
+      dispatch(fetchLiveTrades());
+    } catch (err) {
+      alert("Trade failed: " + err.message || err);
+    }
+  };
+
   if (!selectedAccount) {
     return (
       <div className="min-h-screen bg-primary flex items-center justify-center p-6">
@@ -57,22 +85,30 @@ export default function TerminalPage() {
            <p className="text-[#8897A9] text-sm mb-8">Please select a trading account to enter the Vantage Markets Web Terminal.</p>
 
            <div className="space-y-3">
-              {accounts.map(acc => (
-                <button
-                  key={acc.number}
-                  onClick={() => setSelectedAccount(acc.number)}
-                  className="w-full flex items-center justify-between p-4 rounded-xl border border-surface-border hover:border-accent hover:bg-accent/5 transition-all text-left"
-                >
-                  <div>
-                    <div className="font-bold text-primary">#{acc.number}</div>
-                    <div className="text-[10px] uppercase font-bold text-[#8897A9]">{acc.type} • {acc.status}</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-bold text-primary">${acc.balance}</div>
-                    <div className="text-[10px] text-accent font-bold">SELECT</div>
-                  </div>
-                </button>
-              ))}
+              {accountsLoading ? (
+                <div className="py-10 flex justify-center">
+                  <RefreshCcw className="w-6 h-6 animate-spin text-accent" />
+                </div>
+              ) : accounts.length === 0 ? (
+                <div className="py-4 text-sm text-[#8897A9]">No accounts found. Please create one first.</div>
+              ) : (
+                accounts.map(acc => (
+                  <button
+                    key={acc.account_number}
+                    onClick={() => setSelectedAccount(acc.account_number)}
+                    className="w-full flex items-center justify-between p-4 rounded-xl border border-surface-border hover:border-accent hover:bg-accent/5 transition-all text-left"
+                  >
+                    <div>
+                      <div className="font-bold text-primary">#{acc.account_number}</div>
+                      <div className="text-[10px] uppercase font-bold text-[#8897A9]">{acc.type.replace('_', ' ')} • {acc.is_demo ? 'Demo' : 'Live'}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-bold text-primary">${parseFloat(acc.balance).toLocaleString()}</div>
+                      <div className="text-[10px] text-accent font-bold">SELECT</div>
+                    </div>
+                  </button>
+                ))
+              )}
               <Link to="/dashboard/accounts" className="block text-xs font-bold text-accent pt-4">Open New Account</Link>
            </div>
 
@@ -103,11 +139,11 @@ export default function TerminalPage() {
           <div className="flex items-center gap-4">
              <div className="flex flex-col">
                 <span className="text-[10px] text-white/40 font-bold uppercase tracking-widest">Account</span>
-                <span className="text-xs font-bold">#{selectedAccount} (Raw ECN)</span>
+                <span className="text-xs font-bold">#{selectedAccount} ({currentAccount?.type.replace('_', ' ')})</span>
              </div>
              <div className="flex flex-col">
                 <span className="text-[10px] text-white/40 font-bold uppercase tracking-widest">Balance</span>
-                <span className="text-xs font-bold text-accent">$5,000.00</span>
+                <span className="text-xs font-bold text-accent">${parseFloat(currentAccount?.balance || 0).toLocaleString()}</span>
              </div>
           </div>
         </div>

@@ -64,7 +64,6 @@ export default function RegisterPage() {
       // authService.register maps form → PHP snake_case payload
       await authService.register(form);
       setDone(true);
-      navigate("/dashboard");
     } catch (err) {
       setApiError(err.message || "Registration failed. Please try again.");
     } finally {

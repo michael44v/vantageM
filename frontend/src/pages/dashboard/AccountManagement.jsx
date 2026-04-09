@@ -1,12 +1,49 @@
-import { useState } from "react";
-import { Plus, CheckCircle, XCircle } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Plus, CheckCircle, XCircle, Loader2 } from "lucide-react";
+import { accountService } from "../../services/api";
 
 export default function AccountManagement() {
   const [showNew, setShowNew] = useState(false);
-  const accounts = [
-    { id: 1, number: "8800123", type: "Raw ECN", balance: "5,000.00", leverage: "1:500", currency: "USD", status: "Live" },
-    { id: 2, number: "9900456", type: "Standard STP", balance: "10,000.00", leverage: "1:500", currency: "USD", status: "Demo" },
-  ];
+  const [accounts, setAccounts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
+  const [formData, setFormData] = useState({
+    type: "standard_stp",
+    leverage: "500",
+    is_demo: false
+  });
+
+  useEffect(() => {
+    fetchAccounts();
+  }, []);
+
+  const fetchAccounts = async () => {
+    setLoading(true);
+    try {
+      const res = await accountService.getAll();
+      setAccounts(res.data);
+    } catch (err) {
+      console.error("Failed to fetch accounts:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateAccount = async () => {
+    setCreating(true);
+    try {
+      await accountService.create({
+        ...formData,
+        leverage: parseInt(formData.leverage, 10)
+      });
+      setShowNew(false);
+      fetchAccounts();
+    } catch (err) {
+      alert("Failed to create account: " + err.message);
+    } finally {
+      setCreating(false);
+    }
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -33,21 +70,38 @@ export default function AccountManagement() {
             </tr>
           </thead>
           <tbody className="divide-y divide-surface-border">
-            {accounts.map((acc) => (
-              <tr key={acc.id} className="hover:bg-surface/30 transition-colors">
-                <td className="px-6 py-5">
-                  <div className="font-bold text-primary">MT4 Account</div>
-                  <div className="text-xs text-[#8897A9]">#{acc.number}</div>
+            {loading ? (
+              <tr>
+                <td colSpan="6" className="px-6 py-10 text-center">
+                  <Loader2 className="w-6 h-6 animate-spin mx-auto text-accent" />
                 </td>
-                <td className="px-6 py-5 text-sm text-[#4A5568]">{acc.type}</td>
-                <td className="px-6 py-5 text-sm text-[#4A5568]">{acc.leverage}</td>
-                <td className="px-6 py-5 font-bold text-primary">${acc.balance} {acc.currency}</td>
-                <td className="px-6 py-5">
-                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${acc.status === 'Live' ? 'bg-emerald-100 text-emerald-600' : 'bg-blue-100 text-blue-600'}`}>
-                    {acc.status}
-                  </span>
+              </tr>
+            ) : accounts.length === 0 ? (
+              <tr>
+                <td colSpan="6" className="px-6 py-10 text-center text-[#8897A9]">
+                  No trading accounts found.
                 </td>
-                <td className="px-6 py-5 text-right">
+              </tr>
+            ) : (
+              accounts.map((acc) => (
+                <tr key={acc.id} className="hover:bg-surface/30 transition-colors">
+                  <td className="px-6 py-5">
+                    <div className="font-bold text-primary">MT4 Account</div>
+                    <div className="text-xs text-[#8897A9]">#{acc.account_number}</div>
+                  </td>
+                  <td className="px-6 py-5 text-sm text-[#4A5568] capitalize">
+                    {acc.type.replace('_', ' ')}
+                  </td>
+                  <td className="px-6 py-5 text-sm text-[#4A5568]">1:{acc.leverage}</td>
+                  <td className="px-6 py-5 font-bold text-primary">
+                    ${parseFloat(acc.balance).toLocaleString('en-US', { minimumFractionDigits: 2 })} {acc.currency}
+                  </td>
+                  <td className="px-6 py-5">
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${!acc.is_demo ? 'bg-emerald-100 text-emerald-600' : 'bg-blue-100 text-blue-600'}`}>
+                      {acc.is_demo ? 'Demo' : 'Live'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-5 text-right">
                   <button className="text-xs font-bold text-accent hover:underline">Change Leverage</button>
                   <span className="mx-2 text-[#DDE3EE]">|</span>
                   <button className="text-xs font-bold text-primary hover:underline">History</button>
@@ -62,26 +116,45 @@ export default function AccountManagement() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
            <div className="bg-white rounded-xl p-8 max-w-md w-full shadow-2xl animate-fade-in-up">
               <h2 className="font-display font-bold text-2xl mb-6 text-primary">Open New Account</h2>
-              <form className="space-y-4">
+              <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); handleCreateAccount(); }}>
                  <div>
                     <label className="block text-xs font-bold uppercase tracking-widest text-[#8897A9] mb-2">Account Type</label>
-                    <select className="input-field">
-                       <option>Standard STP</option>
-                       <option>Raw ECN</option>
-                       <option>Pro ECN</option>
+                    <select
+                      className="input-field"
+                      value={formData.type}
+                      onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                    >
+                       <option value="standard_stp">Standard STP</option>
+                       <option value="raw_ecn">Raw ECN</option>
+                       <option value="pro_ecn">Pro ECN</option>
                     </select>
                  </div>
                  <div>
                     <label className="block text-xs font-bold uppercase tracking-widest text-[#8897A9] mb-2">Leverage</label>
-                    <select className="input-field">
-                       <option>1:100</option>
-                       <option>1:200</option>
-                       <option>1:500</option>
+                    <select
+                      className="input-field"
+                      value={formData.leverage}
+                      onChange={(e) => setFormData({ ...formData, leverage: e.target.value })}
+                    >
+                       <option value="100">1:100</option>
+                       <option value="200">1:200</option>
+                       <option value="500">1:500</option>
                     </select>
+                 </div>
+                 <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="is_demo"
+                      checked={formData.is_demo}
+                      onChange={(e) => setFormData({ ...formData, is_demo: e.target.checked })}
+                    />
+                    <label htmlFor="is_demo" className="text-sm text-[#4A5568]">Demo Account</label>
                  </div>
                  <div className="flex gap-3 pt-4">
                     <button type="button" onClick={() => setShowNew(false)} className="flex-1 btn-ghost">Cancel</button>
-                    <button type="button" className="flex-1 btn-primary">Create Account</button>
+                    <button type="submit" disabled={creating} className="flex-1 btn-primary flex items-center justify-center">
+                      {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : "Create Account"}
+                    </button>
                  </div>
               </form>
            </div>

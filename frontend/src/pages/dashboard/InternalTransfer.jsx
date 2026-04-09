@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useDispatch } from "react-redux";
 import { ArrowRightLeft, Wallet, TrendingUp, ArrowRight, AlertCircle, Loader2 } from "lucide-react";
 import { accountService } from "../../services/api";
@@ -8,25 +8,38 @@ export default function InternalTransfer() {
   const [to, setTo] = useState("");
   const [amount, setAmount] = useState("");
   const [loading, setLoading] = useState(false);
+  const [accounts, setAccounts] = useState([]);
+  const [fetching, setFetching] = useState(true);
 
-  const accounts = [
-    { id: 1, number: "8800123", type: "Raw ECN", balance: "5,000.00", status: "Live" },
-    { id: 2, number: "9900456", type: "Standard STP", balance: "10,000.00", status: "Demo" },
-  ];
+  useEffect(() => {
+    const fetchAccounts = async () => {
+      try {
+        const res = await accountService.getAll();
+        setAccounts(res.data);
+      } catch (err) {
+        console.error("Failed to fetch accounts:", err);
+      } finally {
+        setFetching(false);
+      }
+    };
+    fetchAccounts();
+  }, []);
 
   const handleTransfer = async () => {
     if (!amount || !to) return;
     setLoading(true);
     try {
-      const payload = {
-        account_id: to === 'wallet' ? (from === '8800123' ? 1 : 2) : (to === '8800123' ? 1 : 2),
+      await accountService.internalTransfer({
+        from,
+        to,
         amount: parseFloat(amount),
-        direction: from === 'wallet' ? 'wallet_to_acc' : 'acc_to_wallet'
-      };
-      // In production: await accountService.internalTransfer(payload);
-      await new Promise(r => setTimeout(r, 1000));
+        accounts
+      });
       alert("Transfer successful!");
       setAmount("");
+      // Refresh accounts
+      const res = await accountService.getAll();
+      setAccounts(res.data);
     } catch (err) {
       alert("Transfer failed: " + err.message);
     } finally {
@@ -52,7 +65,7 @@ export default function InternalTransfer() {
             >
               <option value="wallet">Main Wallet ($1,000.00)</option>
               {accounts.map(acc => (
-                <option key={acc.number} value={acc.number}>MT4 #{acc.number} (${acc.balance})</option>
+                <option key={acc.account_number} value={acc.account_number}>MT4 #{acc.account_number} (${parseFloat(acc.balance).toLocaleString()})</option>
               ))}
             </select>
           </div>
@@ -70,8 +83,8 @@ export default function InternalTransfer() {
             >
               <option value="">Select Destination</option>
               {from !== 'wallet' && <option value="wallet">Main Wallet</option>}
-              {accounts.filter(acc => acc.number !== from).map(acc => (
-                <option key={acc.number} value={acc.number}>MT4 #{acc.number}</option>
+              {accounts.filter(acc => acc.account_number !== from).map(acc => (
+                <option key={acc.account_number} value={acc.account_number}>MT4 #{acc.account_number}</option>
               ))}
             </select>
           </div>
