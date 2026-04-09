@@ -57,6 +57,23 @@ export default function TerminalPage() {
     }
   }, [selectedAccount, dispatch]);
 
+  const onTradeExecute = async (data) => {
+    try {
+      await dispatch(executeTrade({
+        account_id: currentAccount.id,
+        symbol: data.symbol,
+        type: data.type,
+        lots: data.lots,
+        price: data.price
+      })).unwrap();
+      alert("Trade executed successfully!");
+      setShowTradeModal(false);
+      dispatch(fetchLiveTrades());
+    } catch (err) {
+      alert("Trade failed: " + err.message || err);
+    }
+  };
+
   if (!selectedAccount) {
     return (
       <div className="min-h-screen bg-primary flex items-center justify-center p-6">

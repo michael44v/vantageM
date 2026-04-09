@@ -72,8 +72,16 @@ case 'admin_dashboard_stats':
 case 'admin_approve_transaction':
     handle_admin_approve_transaction($db, $input);
     break;
-    
-    
+case 'admin_get_transactions':
+    handle_admin_get_transactions($db);
+    break;
+case 'admin_get_all_kyc':
+    handle_admin_get_all_kyc($db);
+    break;
+case 'admin_approve_kyc':
+    handle_admin_approve_kyc($db, $input);
+    break;
+
     case 'login':
         handle_login($db, $input);
         break;
@@ -139,10 +147,18 @@ function handle_register($db, $input) {
     $email = $db->real_escape_string($input['email']);
     $pass = password_hash($input['password'], PASSWORD_BCRYPT);
     $country = $db->real_escape_string($input['country']);
+    $phone = $db->real_escape_string($input['phone'] ?? '');
 
-    $sql = "INSERT INTO users (name, email, password_hash, country) VALUES ('$name', '$email', '$pass', '$country')";
+    $sql = "INSERT INTO users (name, email, password_hash, country, phone) VALUES ('$name', '$email', '$pass', '$country', '$phone')";
     if ($db->query($sql)) {
-        send_json(['success' => true, 'message' => 'User registered']);
+        $user_id = $db->insert_id;
+
+        // Auto-create initial trading account (standard_stp)
+        $acc_number = (string)rand(1000000, 9999999);
+        $db->query("INSERT INTO trading_accounts (user_id, account_number, type, balance, leverage, currency)
+                    VALUES ($user_id, '$acc_number', 'standard_stp', 0.00, 500, 'USD')");
+
+        send_json(['success' => true, 'message' => 'User registered and trading account created.']);
     }
     send_json(['success' => false, 'error' => $db->error], 500);
 }
@@ -481,4 +497,34 @@ function handle_admin_approve_transaction($db, $input) {
     }
  
     send_json(['success' => true, 'message' => 'Transaction approved and wallet credited.']);
+}
+
+function handle_admin_get_transactions($db) {
+    $res = $db->query("
+        SELECT t.*, u.name as user_name
+        FROM transactions t
+        JOIN users u ON t.user_id = u.id
+        ORDER BY t.created_at DESC
+    ");
+    send_json(['success' => true, 'data' => $res->fetch_all(MYSQLI_ASSOC)]);
+}
+
+function handle_admin_get_all_kyc($db) {
+    $res = $db->query("
+        SELECT k.*, u.name as user_name
+        FROM kyc_documents k
+        JOIN users u ON k.user_id = u.id
+        ORDER BY k.created_at DESC
+    ");
+    send_json(['success' => true, 'data' => $res->fetch_all(MYSQLI_ASSOC)]);
+}
+
+function handle_admin_approve_kyc($db, $input) {
+    $id = (int)($input['id'] ?? 0);
+    $status = $db->real_escape_string($input['status'] ?? 'approved'); // approved or rejected
+
+    if (!$id) send_json(['success' => false, 'error' => 'Missing ID'], 400);
+
+    $db->query("UPDATE kyc_documents SET status = '$status' WHERE id = $id");
+    send_json(['success' => true, 'message' => 'KYC status updated.']);
 }

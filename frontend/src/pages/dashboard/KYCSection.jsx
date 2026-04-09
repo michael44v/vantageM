@@ -3,36 +3,37 @@ import { User, ShieldCheck, Mail, Globe, Phone, FileText, Upload, CheckCircle, L
 import { kycService } from "../../services/api";
 
 export default function KYCSection() {
+  const { user } = useAuth();
   const [kycStatus, setKycStatus] = useState("pending"); // pending, approved, rejected
   const [loading, setLoading] = useState(false);
-  const [docs, setDocs] = useState([
-    { type: "ID Card / Passport", status: "Approved", date: "2024-04-01" },
-    { type: "Proof of Address", status: "Pending", date: "2024-04-05" },
-  ]);
+  const [docs, setDocs] = useState([]);
 
   useEffect(() => {
-    const fetchStatus = async () => {
-      try {
-        // const response = await kycService.getStatus();
-        // if (response.success) setDocs(response.data);
-      } catch (err) {
-        console.error("Failed to fetch KYC status", err);
-      }
-    };
     fetchStatus();
   }, []);
 
+  const fetchStatus = async () => {
+    try {
+      const response = await kycService.getKYC();
+      setDocs(response.data);
+      if (response.data.length > 0) {
+        // Simple logic for overall status
+        const approved = response.data.filter(d => d.status === 'approved');
+        if (approved.length >= 2) setKycStatus("approved");
+      }
+    } catch (err) {
+      console.error("Failed to fetch KYC status", err);
+    }
+  };
+
   const handleUpload = async (e) => {
-    // const file = e.target.files[0];
-    // if (!file) return;
+    const file = e.target.files[0];
+    if (!file) return;
     setLoading(true);
     try {
-      // const formData = new FormData();
-      // formData.append("file", file);
-      // formData.append("document_type", "identity");
-      // await kycService.upload(formData);
-      await new Promise(r => setTimeout(r, 1500));
+      await kycService.upload(file, "identity");
       alert("Document uploaded successfully and is now pending review.");
+      fetchStatus();
     } catch (err) {
       alert("Upload failed: " + err.message);
     } finally {
@@ -58,11 +59,11 @@ export default function KYCSection() {
               <div className="space-y-4">
                  <div className="flex items-center gap-3">
                     <User className="w-4 h-4 text-[#8897A9]" />
-                    <div className="text-sm font-bold text-primary">Demo Trader</div>
+                    <div className="text-sm font-bold text-primary">{user?.name}</div>
                  </div>
                  <div className="flex items-center gap-3">
                     <Mail className="w-4 h-4 text-[#8897A9]" />
-                    <div className="text-sm font-medium text-[#4A5568]">trader@vantagemarkets.com</div>
+                    <div className="text-sm font-medium text-[#4A5568]">{user?.email}</div>
                  </div>
                  <div className="flex items-center gap-3">
                     <Phone className="w-4 h-4 text-[#8897A9]" />
@@ -82,16 +83,18 @@ export default function KYCSection() {
            <div className="bg-white border border-surface-border rounded-xl p-8 shadow-card">
               <h3 className="font-display font-bold text-lg text-primary mb-6">Identity Verification</h3>
               <div className="space-y-4 mb-8">
-                 {docs.map((doc) => (
-                    <div key={doc.type} className="flex items-center justify-between p-4 bg-surface rounded-xl border border-surface-border">
+                 {docs.length === 0 ? (
+                    <div className="text-center py-4 text-[#8897A9] text-sm italic">No documents uploaded yet.</div>
+                 ) : docs.map((doc) => (
+                    <div key={doc.id} className="flex items-center justify-between p-4 bg-surface rounded-xl border border-surface-border">
                        <div className="flex items-center gap-3">
                           <FileText className="w-5 h-5 text-accent" />
                           <div>
-                             <div className="text-sm font-bold text-primary">{doc.type}</div>
-                             <div className="text-[10px] text-[#8897A9]">{doc.date}</div>
+                             <div className="text-sm font-bold text-primary capitalize">{doc.document_type.replace('_', ' ')}</div>
+                             <div className="text-[10px] text-[#8897A9]">{new Date(doc.created_at).toLocaleDateString()}</div>
                           </div>
                        </div>
-                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${doc.status === 'Approved' ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}`}>
+                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${doc.status === 'approved' ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}`}>
                           {doc.status}
                        </span>
                     </div>

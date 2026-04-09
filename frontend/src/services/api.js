@@ -187,6 +187,9 @@ export const kycService = {
     }
     return backendData;
   },
+
+  /** GET ?action=get_kyc */
+  getKYC: () => req("get_kyc"),
 };
 
 // ─── Payments ─────────────────────────────────────────────────────────────────
@@ -268,10 +271,23 @@ export const adminService = {
   /** GET ?action=admin_dashboard_stats  (PHP handler needed) */
   getDashboardStats: () => req("admin_dashboard_stats"),
 
-  /** POST ?action=admin_approve_transaction  (PHP handler needed) */
+  /** POST ?action=admin_approve_transaction */
   approveTransaction: (id) =>
     req("admin_approve_transaction", {
       method: "POST",
       body: { transaction_id: id },
+    }),
+
+  /** GET ?action=admin_get_transactions */
+  getAllTransactions: () => req("admin_get_transactions"),
+
+  /** GET ?action=admin_get_all_kyc */
+  getAllKYC: () => req("admin_get_all_kyc"),
+
+  /** POST ?action=admin_approve_kyc */
+  approveKYC: (id, status) =>
+    req("admin_approve_kyc", {
+      method: "POST",
+      body: { id, status },
     }),
 };
