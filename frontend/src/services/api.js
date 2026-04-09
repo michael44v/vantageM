@@ -201,18 +201,20 @@ export const paymentService = {
 export const tradingService = {
   /**
    * POST ?action=execute_trade
-   * PHP expects: { account_id, symbol, type ("long"|"short"), lots, price }
+   * PHP expects: { account_id, symbol, type ("long"|"short"), lots, price, stop_loss, take_profit }
    * UI sends "buy"/"sell" so we map here to match the DB positions enum.
    */
-  execute: ({ tradingAccountId, symbol, type, lots, price }) =>
+  execute: ({ tradingAccountId, symbol, type, lots, price, stopLoss, takeProfit }) =>
     req("execute_trade", {
       method: "POST",
       body: {
-        account_id: tradingAccountId,
+        account_id:  tradingAccountId,
         symbol,
-        type:  type === "buy" ? "long" : "short",
-        lots:  parseFloat(lots),
-        price: parseFloat(price),
+        type:        type === "buy" ? "long" : "short",
+        lots:        parseFloat(lots),
+        price:       parseFloat(price),
+        stop_loss:   stopLoss,
+        take_profit: takeProfit,
       },
     }),
 
@@ -221,6 +223,18 @@ export const tradingService = {
    */
   getPositions: (accountId) =>
     req("get_positions", { params: { account_id: accountId } }),
+
+  /**
+   * POST ?action=close_position
+   * Payload: { position_id }
+   */
+  closePosition: (positionId) =>
+    req("close_position", { method: "POST", body: { position_id: positionId } }),
+
+  /**
+   * GET ?action=get_user_accounts
+   */
+  getUserAccounts: () => req("get_user_accounts"),
 };
 
 // ─── Copy Trading ─────────────────────────────────────────────────────────────
