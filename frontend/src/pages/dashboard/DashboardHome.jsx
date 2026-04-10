@@ -19,28 +19,33 @@ function Skeleton({ className = "" }) {
 }
 
 // ─── Account Card ─────────────────────────────────────────────────────────────
+// ─── Account Card ─────────────────────────────────────────────────────────────
 function AccountCard({ acc }) {
-  const isLive = !acc.is_demo;
+  // MySQL returns "0"/"1" strings — must compare explicitly
+  const isLive = acc.is_demo === "0" || acc.is_demo === 0 || acc.is_demo === false;
+
   return (
-    <div className="bg-white border border-surface-border rounded-xl p-6 shadow-card hover:border-accent/40 hover:shadow-lg transition-all group">
+    <div className="bg-white border border-surface-border rounded-xl p-6 shadow-card hover:shadow-lg transition-all group"
+      style={{ borderTop: `3px solid ${isLive ? "#10b981" : "#3b82f6"}` }}>
+
+      {/* Header row */}
       <div className="flex items-center justify-between mb-4">
-        <span
-          className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-            isLive
-              ? "bg-emerald-100 text-emerald-600"
-              : "bg-blue-100 text-blue-600"
-          }`}
-        >
-          {isLive ? "Live" : "Demo"} Account
+        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+          isLive ? "bg-emerald-100 text-emerald-700" : "bg-blue-100 text-blue-700"
+        }`}>
+          {/* Pulsing dot */}
+          <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isLive ? "bg-emerald-500 animate-pulse" : "bg-blue-400"}`} />
+          {isLive ? "Live Account" : "Demo Account"}
         </span>
-        <span className="text-xs font-medium text-[#8897A9]">
-          #{acc.account_number}
-        </span>
+        <span className="text-xs font-medium text-[#8897A9]">#{acc.account_number}</span>
       </div>
 
+      {/* Type */}
       <div className="text-xs text-[#8897A9] mb-1 capitalize">
-        {acc.type?.replace("_", " ")}
+        {acc.type?.replace(/_/g, " ")}
       </div>
+
+      {/* Balance */}
       <div className="font-display font-bold text-2xl text-primary mb-1">
         {acc.currency ?? "USD"}{" "}
         {parseFloat(acc.balance ?? 0).toLocaleString("en-US", {
@@ -48,23 +53,41 @@ function AccountCard({ acc }) {
           maximumFractionDigits: 2,
         })}
       </div>
+
+      {/* Leverage + status */}
       <div className="text-xs text-[#8897A9] mb-5">
-        Leverage: 1:{acc.leverage ?? "—"} &nbsp;·&nbsp;
-        <span
-          className={
-            acc.status === "active" ? "text-emerald-500" : "text-orange-400"
-          }
-        >
+        Leverage 1:{acc.leverage ?? "—"}&nbsp;·&nbsp;
+        <span className={acc.status === "active" ? "text-emerald-500" : "text-orange-400"}>
           {acc.status ?? "—"}
         </span>
       </div>
 
-      <Link
-        to="/trading-terminal"
-        className="w-full btn-ghost text-sm py-2.5 flex items-center justify-center gap-2 group-hover:border-accent/50 transition-colors"
-      >
-        <Activity className="w-4 h-4" /> Trade
-      </Link>
+      {/* ── Action buttons — clearly differentiated by account type ── */}
+      {isLive ? (
+        /* LIVE — two actions: trade + transfer */
+        <div className="space-y-2">
+          <Link to="/trading-terminal"
+            className="w-full btn-primary text-sm py-2.5 flex items-center justify-center gap-2">
+            <Activity className="w-4 h-4" /> Trade Now
+          </Link>
+          <Link to="/dashboard/transfer"
+            className="w-full btn-ghost text-sm py-2.5 flex items-center justify-center gap-2 border-emerald-200 text-emerald-700 hover:border-emerald-400 hover:bg-emerald-50 transition-colors">
+            <ArrowRight className="w-4 h-4" /> Transfer Funds
+          </Link>
+        </div>
+      ) : (
+        /* DEMO — two actions: trade + top up */
+        <div className="space-y-2">
+          <Link to="/trading-terminal"
+            className="w-full btn-ghost text-sm py-2.5 flex items-center justify-center gap-2 border-blue-200 text-blue-700 hover:border-blue-400 hover:bg-blue-50 transition-colors">
+            <Activity className="w-4 h-4" /> Practice Trade
+          </Link>
+          <Link to="/dashboard/transfer"
+            className="w-full text-sm py-2.5 flex items-center justify-center gap-2 rounded-xl font-bold bg-blue-600 hover:bg-blue-700 text-white transition-colors">
+            <Plus className="w-4 h-4" /> Top Up Demo
+          </Link>
+        </div>
+      )}
     </div>
   );
 }
@@ -94,31 +117,32 @@ export default function DashboardHome() {
   const [loading, setLoading]       = useState(true);
   const [error, setError]           = useState("");
   const [refreshing, setRefreshing] = useState(false);
+  const [kyc, setKyc] = useState({});
 
   // ── Derived wallet total from accounts flagged as wallet, or a separate field
   // The backend get_accounts response may include a wallet_balance at top level.
-  const fetchData = useCallback(async (silent = false) => {
-    silent ? setRefreshing(true) : setLoading(true);
-    setError("");
-    try {
-      const res = await accountService.getAll();
-      // Expected shape: { success, data: [...accounts], wallet_balance?: number }
-      const list = Array.isArray(res.data) ? res.data : [];
-      setAccounts(list);
-      // wallet_balance may be returned at the top level
-      if (res.wallet_balance !== undefined) {
-        setWalletBal(res.wallet_balance);
-      } else {
-        // fallback: sum demo accounts as proxy (adjust if your API differs)
-        setWalletBal(null);
-      }
-    } catch (err) {
-      setError(err.message || "Failed to load account data.");
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+const fetchData = useCallback(async (silent = false) => {
+  silent ? setRefreshing(true) : setLoading(true);
+  setError("");
+  try {
+    const { accounts, kyc, wallet_balance } = await accountService.getAll();
+    setAccounts(accounts);
+    setWalletBal(wallet_balance);
+
+    // Normalise: API may return [] (no docs yet) or { identity:{}, address:{} }
+    if (Array.isArray(kyc)) {
+      // Empty — no documents uploaded yet
+      setKyc({});
+    } else {
+      setKyc(kyc);
     }
-  }, []);
+  } catch (err) {
+    setError(err.message || "Failed to load account data.");
+  } finally {
+    setLoading(false);
+    setRefreshing(false);
+  }
+}, []);
 
   useEffect(() => {
     fetchData();

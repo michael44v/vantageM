@@ -36,6 +36,7 @@ export default function LoginPage() {
       setError("Please enter your email and password.");
       return;
     }
+    
 
     setLoading(true);
     try {

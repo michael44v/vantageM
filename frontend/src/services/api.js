@@ -1,29 +1,33 @@
 /**
  * Vantage Markets — Frontend API Service
  *
- * Mirrors the PHP backend's ?action= routing exactly.
- * Base: https://vantagemarketts.com/backend/api
- *
+ * Base: https://vantagemarketts.com/backend/api.php
  * Auth: PHP returns a base64 token on login.
- * We store it in localStorage and send as Bearer on every request.
+ *       Stored in localStorage, sent as Bearer on every request.
  *
- * KYC files: uploaded to Cloudinary first, then the secure_url is sent
- * to the backend via the upload_kyc action (FormData).
+ * KYC:  Files are uploaded to Cloudinary first (unsigned preset),
+ *       then the secure_url is POSTed to ?action=upload_kyc via FormData.
  */
 
 const BASE_URL = "https://vantagemarketts.com/backend/";
 
-// ── Replace with your Cloudinary project details ──────────────────────────────
-const CLOUDINARY_CLOUD_NAME    = "YOUR_CLOUD_NAME";    // e.g. "dxyz123"
-const CLOUDINARY_UPLOAD_PRESET = "YOUR_UPLOAD_PRESET"; // unsigned preset name
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Cloudinary config (from .env) ─────────────────────────────────────────────
+const CLOUDINARY_CLOUD_NAME    = "dguvkirdr";
+const CLOUDINARY_UPLOAD_PRESET = "ablemarkets"
 
-// ─── Token Helpers ────────────────────────────────────────────────────────────
-export const getToken   = ()    => localStorage.getItem("vm_token");
-export const setToken   = (tok) => localStorage.setItem("vm_token", tok);
-export const clearToken = ()    => localStorage.removeItem("vm_token");
+// ── Token helpers ─────────────────────────────────────────────────────────────
+export const getToken   = ()      => localStorage.getItem("vm_token");
+export const setToken   = (tok)   => localStorage.setItem("vm_token", tok);
+export const clearToken = ()      => localStorage.removeItem("vm_token");
 
-// ─── Core Request ─────────────────────────────────────────────────────────────
+// ── Core request helper ───────────────────────────────────────────────────────
+/**
+ * @param {string} action        ?action= value
+ * @param {object} opts
+ * @param {string}  opts.method  GET | POST  (default GET)
+ * @param {object}  opts.body    JSON body for POST
+ * @param {object}  opts.params  Extra query-string params
+ */
 async function req(action, { method = "GET", body = null, params = {} } = {}) {
   const url = new URL(BASE_URL);
   url.searchParams.set("action", action);
@@ -39,7 +43,7 @@ async function req(action, { method = "GET", body = null, params = {} } = {}) {
     method,
     headers,
     credentials: "include",
-    ...(body ? { body: JSON.stringify(body) } : {}),
+    ...(body !== null ? { body: JSON.stringify(body) } : {}),
   });
 
   const data = await res.json();
@@ -49,7 +53,7 @@ async function req(action, { method = "GET", body = null, params = {} } = {}) {
   return data;
 }
 
-// ─── Auth ─────────────────────────────────────────────────────────────────────
+// ── Auth ──────────────────────────────────────────────────────────────────────
 export const authService = {
   /**
    * POST ?action=login
@@ -63,7 +67,7 @@ export const authService = {
 
   /**
    * POST ?action=register
-   * Maps camelCase form → PHP snake_case fields.
+   * Maps camelCase → PHP snake_case.
    * accountType: "standard" → "standard_stp", "raw" → "raw_ecn", "demo" → "demo"
    */
   register: (form) => {
@@ -86,28 +90,66 @@ export const authService = {
   logout: () => clearToken(),
 };
 
-// ─── Trading Accounts ─────────────────────────────────────────────────────────
+// ── Trading Accounts ──────────────────────────────────────────────────────────
 export const accountService = {
   /**
    * GET ?action=get_accounts
-   * Returns { success, data: [{ id, account_number, type, is_demo,
-   *   balance, leverage, currency, status }] }
+   * Returns:
+   *   { success, data: { accounts: [...], kyc: {...}, balance: number } }
+   *
+   * Normalised return shape:
+   *   { accounts, kyc, wallet_balance }
    */
-  getAll: () => req("get_accounts"),
+  getAll: async () => {
+    const res = await req("get_accounts");
+    return {
+      accounts:       Array.isArray(res.data?.accounts) ? res.data.accounts : [],
+      kyc:            res.data?.kyc ?? {},
+      wallet_balance: res.data?.balance ?? null,
+    };
+  },
+
+  /**
+   * POST ?action=create_account
+   * Payload: { type, is_demo, leverage }
+   * PHP enforces one account per type per mode (live vs demo).
+   */
+  createAccount: ({ type, isDemo, leverage }) =>
+    req("create_account", {
+      method: "POST",
+      body: {
+        type,
+        is_demo:  isDemo ? 1 : 0,
+        leverage: parseInt(leverage, 10),
+      },
+    }),
+
+  /**
+   * POST ?action=demo_topup
+   * Payload: { account_id, amount }
+   * Only works on is_demo = 1 accounts.
+   */
+  demoTopUp: (accountId, amount) =>
+    req("demo_topup", {
+      method: "POST",
+      body: { account_id: accountId, amount },
+    }),
 
   /**
    * POST ?action=internal_transfer
-   * PHP payload: { account_id, amount, direction }
+   * Payload: { account_id, amount, direction }
+   * direction: "wallet_to_acc" | "acc_to_wallet"
    *
-   * @param {string} from     - "wallet" or an account_number
-   * @param {string} to       - "wallet" or an account_number
+   * @param {string} from       "wallet" or account id (string/number)
+   * @param {string} to         "wallet" or account id (string/number)
    * @param {number} amount
-   * @param {Array}  accounts - full accounts list to resolve account_number → id
+   * @param {Array}  accounts   Full account list to resolve id
    */
   internalTransfer: ({ from, to, amount, accounts }) => {
-    const isFromWallet  = from === "wallet";
-    const accountNumber = isFromWallet ? to : from;
-    const account       = accounts.find((a) => a.account_number === accountNumber);
+    const isFromWallet = from === "wallet";
+    const accountId    = isFromWallet ? to : from;
+    const account      = accounts.find((a) => String(a.id) === String(accountId));
+
     if (!account) throw new Error("Could not resolve account for transfer.");
 
     return req("internal_transfer", {
@@ -122,7 +164,7 @@ export const accountService = {
 
   /**
    * POST ?action=update_leverage
-   * PHP payload: { account_id, leverage }
+   * Payload: { account_id, leverage }
    */
   updateLeverage: (accountId, leverage) =>
     req("update_leverage", {
@@ -131,50 +173,70 @@ export const accountService = {
     }),
 };
 
-// ─── KYC ─────────────────────────────────────────────────────────────────────
+// ── KYC ───────────────────────────────────────────────────────────────────────
 export const kycService = {
   /**
+   * GET ?action=get_kyc
+   * Returns: { success, data: [{ id, document_type, file_url, status,
+   *             rejection_reason, created_at }] }
+   */
+  getDocuments: () => req("get_kyc"),
+
+  /**
    * Two-step upload:
-   *   1. Push file to Cloudinary (unsigned) → get secure_url
-   *   2. POST ?action=upload_kyc with FormData (file_url + document_type)
-   *      PHP currently checks $_FILES['file']; sending FormData keeps
-   *      compatibility and also includes the Cloudinary URL for future use.
+   *   1. Upload file to Cloudinary (unsigned preset) → get secure_url
+   *   2. POST ?action=upload_kyc via FormData with:
+   *        file          — the original File object (PHP $_FILES fallback)
+   *        document_type — "identity" | "address"
+   *        file_url      — Cloudinary secure_url  ← PHP prefers this
+   *        public_id     — Cloudinary public_id   (extra metadata)
    *
    * @param {File}   file
-   * @param {string} docType  "identity" | "address"
+   * @param {string} docType   "identity" | "address"
    */
   upload: async (file, docType = "identity") => {
-    // Step 1 — Cloudinary
+    // ── Step 1: Cloudinary upload ──────────────────────────────────────────
+    if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_UPLOAD_PRESET) {
+      throw new Error(
+        "Cloudinary is not configured. " +
+        "Set VITE_CLOUDINARY_CLOUD_NAME and VITE_CLOUDINARY_UPLOAD_PRESET in your .env"
+      );
+    }
+
     const cfForm = new FormData();
-    cfForm.append("file", file);
-    cfForm.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
-    cfForm.append("folder", "vantage_kyc");
+    cfForm.append("file",           file);
+    cfForm.append("upload_preset",  CLOUDINARY_UPLOAD_PRESET);
+    cfForm.append("folder",         "vantage_kyc");
 
     const cfRes = await fetch(
       `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/auto/upload`,
       { method: "POST", body: cfForm }
     );
+
     if (!cfRes.ok) {
       const err = await cfRes.json();
       throw new Error(err.error?.message || "Cloudinary upload failed.");
     }
+
     const { secure_url, public_id } = await cfRes.json();
 
-    // Step 2 — Backend (FormData so $_FILES['file'] check is satisfied,
-    // plus we pass the CDN url and type as extra fields)
+    // ── Step 2: Backend registration ──────────────────────────────────────
     const backendForm = new FormData();
-    backendForm.append("file", file);
+    backendForm.append("file",          file);          // satisfies PHP $_FILES check
     backendForm.append("document_type", docType);
-    backendForm.append("file_url", secure_url);
-    backendForm.append("public_id", public_id);
+    backendForm.append("file_url",      secure_url);
+    backendForm.append("public_id",     public_id);
 
     const token = getToken();
     const backendRes = await fetch(`${BASE_URL}?action=upload_kyc`, {
-      method: "POST",
+      method:      "POST",
       credentials: "include",
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-      body: backendForm,
+      headers:     token ? { Authorization: `Bearer ${token}` } : {},
+      body:        backendForm,
+      // NOTE: Do NOT set Content-Type here — browser sets it automatically
+      //       with the correct multipart boundary when using FormData.
     });
+
     const backendData = await backendRes.json();
     if (!backendRes.ok || backendData.success === false) {
       throw new Error(backendData.error || "KYC submission failed.");
@@ -183,12 +245,17 @@ export const kycService = {
   },
 };
 
-// ─── Payments ─────────────────────────────────────────────────────────────────
+// ── Payments ──────────────────────────────────────────────────────────────────
 export const paymentService = {
   /**
    * POST ?action=deposit
-   * PHP returns: { success, message, url }  ← Coinbase hosted_url
-   * Caller: window.location.href = res.url
+   * Payload: { amount, currency }
+   * PHP returns: { success, message, url }
+   *
+   * NOTE: The current PHP handle_deposit() is a stub that returns a mock URL.
+   * When you wire up a real payment processor, the caller should do:
+   *   const res = await paymentService.initiateDeposit({ amount, currency });
+   *   if (res.url) window.location.href = res.url;
    */
   initiateDeposit: ({ amount, currency = "USD" }) =>
     req("deposit", {
@@ -197,43 +264,88 @@ export const paymentService = {
     }),
 };
 
-// ─── Trading ──────────────────────────────────────────────────────────────────
+// ── Trading ───────────────────────────────────────────────────────────────────
 export const tradingService = {
   /**
-   * POST ?action=execute_trade
-   * PHP expects: { account_id, symbol, type ("long"|"short"), lots, price }
-   * UI sends "buy"/"sell" so we map here to match the DB positions enum.
+   * GET ?action=get_user_accounts
+   * Returns active accounts for the terminal account-selector screen.
+   * { success, data: [{ id, account_number, type, is_demo,
+   *                     balance, leverage, currency, status }] }
    */
-  execute: ({ tradingAccountId, symbol, type, lots, price }) =>
+  getUserAccounts: () => req("get_user_accounts"),
+
+  /**
+   * POST ?action=execute_trade
+   * Payload (PHP):
+   *   account_id, symbol, type (long|short), lots, price,
+   *   stop_loss?, take_profit?
+   *
+   * PHP checks margin, inserts into `positions`, mirrors to copiers.
+   * Returns: { success, message, data: <new position row> }
+   */
+  execute: ({ tradingAccountId, symbol, type, lots, price, stopLoss, takeProfit }) =>
     req("execute_trade", {
       method: "POST",
       body: {
-        account_id: tradingAccountId,
+        account_id:  tradingAccountId,
         symbol,
-        type:  type === "buy" ? "long" : "short",
-        lots:  parseFloat(lots),
-        price: parseFloat(price),
+        type:        type === "buy" ? "long" : "short",
+        lots:        parseFloat(lots),
+        price:       parseFloat(price),
+        stop_loss:   stopLoss   ? parseFloat(stopLoss)   : undefined,
+        take_profit: takeProfit ? parseFloat(takeProfit) : undefined,
       },
     }),
 
   /**
    * GET ?action=get_positions&account_id={id}
+   * PHP applies simulated price movement and calculates live P&L.
+   * Returns: { success, data: [...positions] }
    */
   getPositions: (accountId) =>
     req("get_positions", { params: { account_id: accountId } }),
+
+  /**
+   * POST ?action=close_position
+   * Payload: { position_id }
+   * PHP calculates final P&L, marks position closed, credits/debits account.
+   * Returns: { success, message, data: { position_id, close_price, pnl } }
+   *
+   * NOTE: The frontend also receives `credit` from res.data to update local
+   * balance. PHP currently returns `pnl` — use that as the credit value.
+   */
+  closePosition: (positionId) =>
+    req("close_position", {
+      method: "POST",
+      body: { position_id: positionId },
+    }),
+
+  /**
+   * GET ?action=get_trade_history
+   *     &account_id={id}&page={n}&per_page=20
+   * Returns: { success, data: [...closed positions], meta: { page, last_page, total } }
+   */
+  getTradeHistory: (accountId, page = 1) =>
+    req("get_trade_history", {
+      params: { account_id: accountId, page, per_page: 20 },
+    }),
 };
 
-// ─── Copy Trading ─────────────────────────────────────────────────────────────
-// DB tables exist (signals, copy_relationships).
-// PHP actions get_signals / copy_signal need to be added to api.php.
+// ── Copy Trading ──────────────────────────────────────────────────────────────
 export const copyTradingService = {
-  /** GET ?action=get_signals */
+  /**
+   * GET ?action=get_signals
+   * Returns active signal providers joined with the user name.
+   * { success, data: [{ id, name, description, roi, win_rate,
+   *                     drawdown, subscribers, provider_name }] }
+   */
   getProviders: () => req("get_signals"),
 
   /**
    * POST ?action=copy_signal
-   * Payload → copy_relationships row:
-   *   copier_id (from auth), provider_id, trading_account_id, risk_multiplier
+   * Payload: { provider_id, trading_account_id, risk_multiplier }
+   * PHP upserts copy_relationships row.
+   * Returns: { success, message, data: { copy_id } }
    */
   copyProvider: ({ providerId, tradingAccountId, riskMultiplier = 1.0 }) =>
     req("copy_signal", {
@@ -246,7 +358,7 @@ export const copyTradingService = {
     }),
 };
 
-// ─── Admin ────────────────────────────────────────────────────────────────────
+// ── Admin ─────────────────────────────────────────────────────────────────────
 export const adminService = {
   /**
    * GET ?action=admin_live_trades
@@ -255,14 +367,26 @@ export const adminService = {
    */
   getLiveTrades: () => req("admin_live_trades"),
 
-  /** GET ?action=admin_get_users&page=1&per_page=20  (PHP handler needed) */
+  /**
+   * GET ?action=admin_get_users&page=1&per_page=20
+   * Paginated user list.
+   * Returns: { success, data: [...users], meta: { page, last_page, total } }
+   */
   getUsers: (page = 1, perPage = 20) =>
     req("admin_get_users", { params: { page, per_page: perPage } }),
 
-  /** GET ?action=admin_dashboard_stats  (PHP handler needed) */
+  /**
+   * GET ?action=admin_dashboard_stats
+   * Returns: { success, data: { total_users, active_users, total_accounts,
+   *             open_positions, total_deposits, pending_transactions, pending_kyc } }
+   */
   getDashboardStats: () => req("admin_dashboard_stats"),
 
-  /** POST ?action=admin_approve_transaction  (PHP handler needed) */
+  /**
+   * POST ?action=admin_approve_transaction
+   * Payload: { transaction_id }
+   * PHP marks transaction completed and credits wallet for deposits.
+   */
   approveTransaction: (id) =>
     req("admin_approve_transaction", {
       method: "POST",

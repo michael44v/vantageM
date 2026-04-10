@@ -1,131 +1,603 @@
-import { useState } from "react";
-import { CreditCard, Wallet, ArrowRight, CheckCircle, Upload } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import {
+  Wallet, ArrowRight, AlertCircle, Loader2, Upload,
+  CheckCircle, Copy, RefreshCw,
+} from "lucide-react";
+import { paymentService, accountService } from "../../services/api";
 
+// ── Wallet addresses ──────────────────────────────────────────────────────────
+const CRYPTO_WALLETS = [
+  {
+    symbol:  "BTC",
+    name:    "Bitcoin",
+    network: "Bitcoin Network",
+    address: "bc1qmal2x2cuadsazm30k8k9r4f49vjemag0n5veue",
+    color:   "#F7931A",
+    icon:    "₿",
+  },
+  {
+    symbol:  "ETH",
+    name:    "Ethereum",
+    network: "ERC-20",
+    address: "0x76b4290026e9BF4770714C6a67302C97724D98aF",
+    color:   "#627EEA",
+    icon:    "Ξ",
+  },
+  {
+    symbol:  "USDT",
+    name:    "Tether",
+    network: "TRC-20 (TRON)",
+    address: "TT5sbDn7brY96wpBEia8Vd4uxGN8vE6M9W",
+    color:   "#26A17B",
+    icon:    "₮",
+  },
+  {
+    symbol:  "BNB",
+    name:    "BNB",
+    network: "BNB Smart Chain",
+    address: "0x76b4290026e9BF4770714C6a67302C97724D98aF",
+    color:   "#F3BA2F",
+    icon:    "B",
+  },
+];
+
+const BANK_DETAILS = [
+  { label: "Bank Name",      value: "Vantage Global Prime" },
+  { label: "Account Number", value: "881 223 990 001" },
+  { label: "SWIFT / BIC",    value: "VGPGBK11XX" },
+  { label: "Account Name",   value: "Vantage Markets Ltd" },
+  { label: "Reference",      value: "Your registered email" },
+];
+
+// ── QR Code (via qrserver.com — no npm required) ──────────────────────────────
+function QRCode({ value, size = 160 }) {
+  const src = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(value)}&bgcolor=ffffff&color=000000&margin=10`;
+  return (
+    <img
+      src={src}
+      alt="Wallet QR Code"
+      width={size}
+      height={size}
+      className="rounded-xl border border-surface-border"
+    />
+  );
+}
+
+// ── Utility components ────────────────────────────────────────────────────────
+function CopyBtn({ text }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = () => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <button onClick={handleCopy} className="ml-2 text-[#8897A9] hover:text-accent transition-colors flex-shrink-0">
+      {copied
+        ? <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
+        : <Copy className="w-3.5 h-3.5" />}
+    </button>
+  );
+}
+
+function Toast({ message, type = "success", onDone }) {
+  useEffect(() => {
+    const t = setTimeout(onDone, 3500);
+    return () => clearTimeout(t);
+  }, [onDone]);
+  return (
+    <div className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-3 rounded-xl shadow-2xl text-white
+      ${type === "success" ? "bg-primary" : "bg-red-600"}`}>
+      {type === "success"
+        ? <CheckCircle className="w-5 h-5 text-emerald-400 flex-shrink-0" />
+        : <AlertCircle className="w-5 h-5 flex-shrink-0" />}
+      <span className="text-sm font-medium">{message}</span>
+    </div>
+  );
+}
+
+function Field({ label, error, children }) {
+  return (
+    <div>
+      <label className="block text-xs font-bold uppercase tracking-widest text-[#8897A9] mb-2">
+        {label}
+      </label>
+      {children}
+      {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+    </div>
+  );
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
 export default function DepositWithdraw() {
-  const [method, setMethod] = useState("coinbase");
-  const [step, setStep] = useState(1); // 1: Amount, 2: Proof
-  const [amount, setAmount] = useState("");
+  const [tab,           setTab]           = useState("deposit");
+  const [method,        setMethod]        = useState("bank");       // "bank" | "crypto"
+  const [selectedCrypto, setCrypto]       = useState(CRYPTO_WALLETS[0]);
+  const [step,          setStep]          = useState(1);
+  const [amount,        setAmount]        = useState("");
+  const [txRef,         setTxRef]         = useState("");
+  const [receipt,       setReceipt]       = useState(null);         // File | null
+  const [loading,       setLoading]       = useState(false);
+  const [walletBal,     setWalletBal]     = useState(null);
+  const [toast,         setToast]         = useState(null);
+  const [fieldErr,      setFieldErr]      = useState({});
 
-  const handleNext = () => setStep(2);
+  // Withdraw form state
+  const [wForm,    setWForm]    = useState({ accountName: "", accountNumber: "", bankName: "", amount: "" });
+  const [wLoading, setWLoading] = useState(false);
 
+  // ── Fetch wallet balance ────────────────────────────────────────────────────
+  const fetchWallet = useCallback(async () => {
+    try {
+      const res = await accountService.getAll();
+      // accountService.getAll() returns { accounts, kyc, wallet_balance }
+      setWalletBal(res.wallet_balance ?? null);
+    } catch (_) {}
+  }, []);
+
+  useEffect(() => { fetchWallet(); }, [fetchWallet]);
+
+  // ── Validation helpers ──────────────────────────────────────────────────────
+  const validateStep1 = () => {
+    const errs = {};
+    const val  = parseFloat(amount);
+    if (!amount || isNaN(val)) errs.amount = "Please enter an amount.";
+    else if (val < 10)         errs.amount = "Minimum deposit is $10.00.";
+    else if (val > 50000)      errs.amount = "Maximum is $50,000.00.";
+    setFieldErr(errs);
+    return !Object.keys(errs).length;
+  };
+
+  const validateStep2 = () => {
+    const errs = {};
+    if (!txRef.trim()) errs.txRef   = "Transaction reference is required.";
+    if (!receipt)      errs.receipt = "Please upload a receipt.";
+    setFieldErr(errs);
+    return !Object.keys(errs).length;
+  };
+
+  // ── Deposit submit ──────────────────────────────────────────────────────────
+  /**
+   * Calls POST ?action=deposit  { amount, currency: "USD" }
+   *
+   * The current PHP handle_deposit() is a stub — it returns a mock Coinbase URL.
+   * If res.url is present we redirect; otherwise we treat it as a
+   * manual-proof submission (bank wire / crypto).
+   */
+  const handleDepositSubmit = async () => {
+    if (!validateStep2()) return;
+    setLoading(true);
+    try {
+      const res = await paymentService.initiateDeposit({
+        amount:   parseFloat(amount),
+        currency: "USD",
+      });
+
+      // If the backend returns a hosted checkout URL, redirect there
+      if (res.url && res.url !== "https://commerce.coinbase.com/charges/mock") {
+        window.location.href = res.url;
+        return;
+      }
+
+      // Otherwise treat as manual proof submission (current stub behaviour)
+      setToast({ message: "Deposit proof submitted! Credited within 24h.", type: "success" });
+      setStep(1);
+      setAmount("");
+      setTxRef("");
+      setReceipt(null);
+      fetchWallet();
+    } catch (err) {
+      setToast({ message: err.message || "Submission failed.", type: "error" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ── Withdraw submit ─────────────────────────────────────────────────────────
+  /**
+   * NOTE: The PHP backend does not yet have a ?action=withdraw handler.
+   * This currently simulates a network call with a 1.2 s delay.
+   * Replace the Promise.resolve() stub with a real req() call once the
+   * PHP endpoint exists:
+   *
+   *   await req("withdraw", { method: "POST", body: { ...wForm } });
+   */
+  const handleWithdraw = async () => {
+    const errs = {};
+    const val  = parseFloat(wForm.amount);
+    if (!wForm.amount || isNaN(val))                          errs.wAmount       = "Enter an amount.";
+    else if (val < 10)                                        errs.wAmount       = "Minimum is $10.";
+    else if (walletBal !== null && val > walletBal)           errs.wAmount       = "Insufficient balance.";
+    if (!wForm.accountName)                                   errs.accountName   = "Required.";
+    if (!wForm.accountNumber)                                 errs.accountNumber = "Required.";
+    if (!wForm.bankName)                                      errs.bankName      = "Required.";
+    setFieldErr(errs);
+    if (Object.keys(errs).length) return;
+
+    setWLoading(true);
+    try {
+      // ── Stub: replace with real API call once PHP endpoint exists ──────────
+      await new Promise((r) => setTimeout(r, 1200));
+      // ── End stub ───────────────────────────────────────────────────────────
+      setToast({ message: "Withdrawal request submitted. Processing in 1–3 days.", type: "success" });
+      setWForm({ accountName: "", accountNumber: "", bankName: "", amount: "" });
+      setFieldErr({});
+    } catch (err) {
+      setToast({ message: err.message || "Failed.", type: "error" });
+    } finally {
+      setWLoading(false);
+    }
+  };
+
+  // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <h1 className="font-display font-extrabold text-2xl text-primary">Funds & Payments</h1>
+
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="font-display font-extrabold text-2xl text-primary">Funds &amp; Payments</h1>
+          {walletBal !== null && (
+            <p className="text-sm text-[#8897A9] mt-1">
+              Wallet:{" "}
+              <span className="font-bold text-primary">
+                ${parseFloat(walletBal).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+              </span>
+              <button onClick={fetchWallet} className="ml-2 text-[#8897A9] hover:text-accent inline-flex items-center">
+                <RefreshCw className="w-3 h-3" />
+              </button>
+            </p>
+          )}
+        </div>
+
+        {/* Tab switcher */}
         <div className="flex gap-2">
-           <button className="px-4 py-2 bg-accent text-white text-xs font-bold rounded-full">Deposit</button>
-           <button className="px-4 py-2 bg-surface text-primary text-xs font-bold rounded-full hover:bg-surface-border">Withdraw</button>
+          {["deposit", "withdraw"].map((t) => (
+            <button
+              key={t}
+              onClick={() => { setTab(t); setStep(1); setFieldErr({}); }}
+              className={`px-5 py-2 text-xs font-bold rounded-full capitalize transition-colors
+                ${tab === t ? "bg-accent text-white" : "bg-surface text-primary hover:bg-surface-border"}`}
+            >
+              {t}
+            </button>
+          ))}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Method Selector */}
-        <div className="lg:col-span-1 space-y-3">
-          <label className="block text-xs font-bold uppercase tracking-widest text-[#8897A9] mb-4">Select Method</label>
-          <button
-            onClick={() => setMethod("coinbase")}
-            className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-all text-left ${method === 'coinbase' ? 'border-accent bg-accent/5 ring-1 ring-accent' : 'border-surface-border bg-white hover:border-accent/40'}`}
-          >
-            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 flex-shrink-0">
-               <CheckCircle className="w-6 h-6" />
-            </div>
-            <div>
-               <div className="font-bold text-primary">Coinbase</div>
-               <div className="text-[10px] text-[#8897A9]">Automated Crypto Payment</div>
-            </div>
-          </button>
+      {/* ── DEPOSIT ──────────────────────────────────────────────────────────── */}
+      {tab === "deposit" ? (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-          <button
-             onClick={() => setMethod("manual")}
-             className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-all text-left ${method === 'manual' ? 'border-accent bg-accent/5 ring-1 ring-accent' : 'border-surface-border bg-white hover:border-accent/40'}`}
-          >
-            <div className="w-10 h-10 rounded-full bg-surface-border flex items-center justify-center text-primary flex-shrink-0">
-               <Wallet className="w-6 h-6" />
-            </div>
-            <div>
-               <div className="font-bold text-primary">Manual Deposit</div>
-               <div className="text-[10px] text-[#8897A9]">Bank Wire / Crypto Transfer</div>
-            </div>
-          </button>
-        </div>
-
-        {/* Action Panel */}
-        <div className="lg:col-span-2 bg-white border border-surface-border rounded-xl p-8 shadow-card">
-           {step === 1 ? (
-             <div className="space-y-6">
-                <h3 className="font-display font-bold text-xl text-primary">Enter Deposit Amount</h3>
-                <div className="space-y-4">
-                   <div>
-                      <label className="block text-xs font-bold uppercase tracking-widest text-[#8897A9] mb-2">Currency</label>
-                      <select className="input-field">
-                         <option>USD - US Dollar</option>
-                         <option>EUR - Euro</option>
-                      </select>
-                   </div>
-                   <div>
-                      <label className="block text-xs font-bold uppercase tracking-widest text-[#8897A9] mb-2">Amount</label>
-                      <input
-                        type="number"
-                        value={amount}
-                        onChange={(e) => setAmount(e.target.value)}
-                        placeholder="0.00"
-                        className="input-field text-lg font-bold"
-                      />
-                      <div className="text-[10px] text-[#8897A9] mt-1 italic">Min: $10.00 | Max: $50,000.00</div>
-                   </div>
-                   <button onClick={handleNext} className="w-full btn-primary flex items-center justify-center gap-2 mt-4">
-                      Continue <ArrowRight className="w-4 h-4" />
-                   </button>
+          {/* Method selector */}
+          <div className="lg:col-span-1 space-y-3">
+            <p className="text-xs font-bold uppercase tracking-widest text-[#8897A9] mb-4">Select Method</p>
+            {[
+              { key: "bank",   label: "Bank Wire", sub: "Manual — 1–3 business days" },
+              { key: "crypto", label: "Crypto",    sub: "BTC · ETH · USDT · BNB" },
+            ].map((m) => (
+              <button
+                key={m.key}
+                onClick={() => { setMethod(m.key); setStep(1); setFieldErr({}); }}
+                className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-all text-left
+                  ${method === m.key
+                    ? "border-accent bg-accent/5 ring-1 ring-accent"
+                    : "border-surface-border bg-white hover:border-accent/40"}`}
+              >
+                <div className="w-10 h-10 rounded-full bg-surface flex items-center justify-center flex-shrink-0">
+                  <Wallet className="w-5 h-5 text-accent" />
                 </div>
-             </div>
-           ) : (
-             <div className="space-y-6 animate-fade-in">
-                <h3 className="font-display font-bold text-xl text-primary">Complete Your Deposit</h3>
-                {method === 'coinbase' ? (
-                  <div className="bg-blue-50 border border-blue-100 rounded-xl p-6 text-center">
-                     <p className="text-sm text-blue-800 mb-6 font-medium">Click below to pay with Coinbase Commerce. Your account will be credited instantly after confirmation.</p>
-                     <button className="btn-primary bg-blue-600 hover:bg-blue-700 shadow-blue-500/20 px-10 py-4 font-bold tracking-wide">
-                        Pay with Coinbase
-                     </button>
+                <div>
+                  <div className="font-bold text-primary text-sm">{m.label}</div>
+                  <div className="text-[10px] text-[#8897A9]">{m.sub}</div>
+                </div>
+              </button>
+            ))}
+
+            {/* Crypto coin picker */}
+            {method === "crypto" && (
+              <div className="pt-3 space-y-2">
+                <p className="text-xs font-bold uppercase tracking-widest text-[#8897A9]">Select Coin</p>
+                {CRYPTO_WALLETS.map((c) => (
+                  <button
+                    key={c.symbol}
+                    onClick={() => setCrypto(c)}
+                    className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-left
+                      ${selectedCrypto.symbol === c.symbol
+                        ? "border-accent bg-accent/5"
+                        : "border-surface-border bg-white hover:border-accent/30"}`}
+                  >
+                    <div
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
+                      style={{ backgroundColor: c.color }}
+                    >
+                      {c.icon}
+                    </div>
+                    <div>
+                      <div className="font-bold text-primary text-sm">{c.symbol}</div>
+                      <div className="text-[10px] text-[#8897A9]">{c.network}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Action panel */}
+          <div className="lg:col-span-2 bg-white border border-surface-border rounded-xl p-6 sm:p-8 shadow-card">
+
+            {/* Step 1 — Amount */}
+            {step === 1 ? (
+              <div className="space-y-6">
+                <h3 className="font-display font-bold text-xl text-primary">Enter Deposit Amount</h3>
+                <Field label="Amount (USD)" error={fieldErr.amount}>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-primary">$</span>
+                    <input
+                      type="number"
+                      value={amount}
+                      onChange={(e) => { setAmount(e.target.value); setFieldErr((p) => ({ ...p, amount: undefined })); }}
+                      placeholder="0.00"
+                      className={`input-field pl-8 text-lg font-bold ${fieldErr.amount ? "border-red-400" : ""}`}
+                    />
                   </div>
+                  <p className="text-[10px] text-[#8897A9] mt-1 italic">Min: $10 · Max: $50,000</p>
+                </Field>
+
+                {/* Quick-select amounts */}
+                <div className="flex gap-2 flex-wrap">
+                  {[100, 500, 1000, 5000].map((v) => (
+                    <button
+                      key={v}
+                      onClick={() => setAmount(String(v))}
+                      className={`px-3 py-1.5 rounded-lg border text-xs font-bold transition-colors
+                        ${parseFloat(amount) === v
+                          ? "border-accent bg-accent/10 text-accent"
+                          : "border-surface-border text-[#8897A9] hover:border-accent/40"}`}
+                    >
+                      ${v.toLocaleString()}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => { if (validateStep1()) setStep(2); }}
+                  className="w-full btn-primary flex items-center justify-center gap-2"
+                >
+                  Continue <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+
+            ) : (
+              /* Step 2 — Payment details + proof upload */
+              <div className="space-y-6 animate-fade-in">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-display font-bold text-xl text-primary">
+                    {method === "crypto" ? `Send ${selectedCrypto.symbol}` : "Bank Transfer"}
+                  </h3>
+                  <span className="text-sm font-bold text-accent">
+                    ${parseFloat(amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+
+                {method === "crypto" ? (
+                  /* ── Crypto: QR + address + proof upload ──────────────── */
+                  <div className="space-y-5">
+                    <div className="flex flex-col sm:flex-row items-center gap-6 p-5 bg-surface rounded-xl border border-surface-border">
+                      <QRCode value={selectedCrypto.address} size={140} />
+                      <div className="flex-1 space-y-3 w-full">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                            style={{ backgroundColor: selectedCrypto.color }}
+                          >
+                            {selectedCrypto.icon}
+                          </div>
+                          <span className="font-bold text-primary">{selectedCrypto.name}</span>
+                          <span className="text-xs text-[#8897A9]">({selectedCrypto.network})</span>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-[#8897A9] font-bold uppercase mb-1">Wallet Address</p>
+                          <div className="flex items-start gap-1">
+                            <code className="text-xs font-mono text-primary break-all leading-relaxed">
+                              {selectedCrypto.address}
+                            </code>
+                            <CopyBtn text={selectedCrypto.address} />
+                          </div>
+                        </div>
+                        <div className="text-[10px] text-[#8897A9] bg-white border border-surface-border rounded-lg px-3 py-2">
+                          Send only{" "}
+                          <span className="font-bold text-primary">{selectedCrypto.symbol}</span> on{" "}
+                          <span className="font-bold text-primary">{selectedCrypto.network}</span>.{" "}
+                          Wrong network = permanent loss.
+                        </div>
+                      </div>
+                    </div>
+
+                    <Field label="Transaction Hash / ID" error={fieldErr.txRef}>
+                      <input
+                        type="text"
+                        value={txRef}
+                        onChange={(e) => { setTxRef(e.target.value); setFieldErr((p) => ({ ...p, txRef: undefined })); }}
+                        placeholder="0x… or txid…"
+                        className={`input-field font-mono text-sm ${fieldErr.txRef ? "border-red-400" : ""}`}
+                      />
+                    </Field>
+
+                    <Field label="Upload Screenshot / Proof" error={fieldErr.receipt}>
+                      <label
+                        className={`border-2 border-dashed rounded-xl p-6 flex flex-col items-center text-center cursor-pointer group transition-colors
+                          ${fieldErr.receipt ? "border-red-300 bg-red-50" : "border-surface-border hover:border-accent"}`}
+                      >
+                        <input
+                          type="file"
+                          className="sr-only"
+                          accept="image/*"
+                          onChange={(e) => { setReceipt(e.target.files?.[0] ?? null); setFieldErr((p) => ({ ...p, receipt: undefined })); }}
+                        />
+                        {receipt
+                          ? <><CheckCircle className="w-7 h-7 text-emerald-500 mb-2" /><p className="text-sm font-bold text-primary">{receipt.name}</p></>
+                          : <><Upload className="w-7 h-7 text-[#8897A9] group-hover:text-accent mb-2 transition-colors" /><p className="text-sm font-bold text-primary">Upload confirmation screenshot</p></>}
+                      </label>
+                    </Field>
+                  </div>
+
                 ) : (
-                  <div className="space-y-6">
-                     <div className="bg-surface rounded-xl p-6 border border-surface-border space-y-4">
-                        <div className="flex justify-between items-center text-sm">
-                           <span className="text-[#8897A9]">Bank Name:</span>
-                           <span className="font-bold text-primary">Vantage Global Prime</span>
+                  /* ── Bank wire: details table + proof upload ──────────── */
+                  <div className="space-y-5">
+                    <div className="bg-surface rounded-xl p-5 border border-surface-border space-y-3">
+                      {BANK_DETAILS.map((row) => (
+                        <div key={row.label} className="flex items-center justify-between text-sm gap-4 flex-wrap">
+                          <span className="text-[#8897A9] flex-shrink-0">{row.label}</span>
+                          <span className="font-bold text-primary flex items-center gap-1 break-all text-right">
+                            {row.value}
+                            <CopyBtn text={row.value} />
+                          </span>
                         </div>
-                        <div className="flex justify-between items-center text-sm">
-                           <span className="text-[#8897A9]">Account Number:</span>
-                           <span className="font-bold text-primary">881 223 990 001</span>
-                        </div>
-                        <div className="flex justify-between items-center text-sm">
-                           <span className="text-[#8897A9]">SWIFT/BIC:</span>
-                           <span className="font-bold text-primary">VGPGBK11XX</span>
-                        </div>
-                     </div>
-                     <div className="space-y-4">
-                        <div>
-                           <label className="block text-xs font-bold uppercase tracking-widest text-[#8897A9] mb-2">Transaction ID / Reference</label>
-                           <input type="text" placeholder="TXN-XXXX" className="input-field" />
-                        </div>
-                        <div>
-                           <label className="block text-xs font-bold uppercase tracking-widest text-[#8897A9] mb-2">Upload Receipt Screenshot</label>
-                           <div className="border-2 border-dashed border-surface-border rounded-xl p-8 flex flex-col items-center justify-center text-center hover:border-accent transition-colors cursor-pointer group">
-                              <Upload className="w-8 h-8 text-[#8897A9] group-hover:text-accent mb-3" />
-                              <div className="text-sm font-bold text-primary">Click to upload or drag & drop</div>
-                              <div className="text-xs text-[#8897A9]">PNG, JPG up to 10MB</div>
-                           </div>
-                        </div>
-                        <button className="w-full btn-primary mt-4">Submit Deposit Proof</button>
-                        <button onClick={() => setStep(1)} className="w-full btn-ghost border-transparent text-xs font-bold hover:bg-transparent hover:text-accent">Go Back</button>
-                     </div>
+                      ))}
+                    </div>
+
+                    <div className="bg-amber-50 border border-amber-100 rounded-lg p-4 flex gap-3">
+                      <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                      <p className="text-xs text-amber-800">
+                        Use your registered email as the transfer reference.
+                        Credited within 1–3 business days.
+                      </p>
+                    </div>
+
+                    <Field label="Transaction Reference" error={fieldErr.txRef}>
+                      <input
+                        type="text"
+                        value={txRef}
+                        onChange={(e) => { setTxRef(e.target.value); setFieldErr((p) => ({ ...p, txRef: undefined })); }}
+                        placeholder="e.g. REF-20240401-001"
+                        className={`input-field ${fieldErr.txRef ? "border-red-400" : ""}`}
+                      />
+                    </Field>
+
+                    <Field label="Upload Receipt" error={fieldErr.receipt}>
+                      <label
+                        className={`border-2 border-dashed rounded-xl p-6 flex flex-col items-center text-center cursor-pointer group transition-colors
+                          ${fieldErr.receipt ? "border-red-300 bg-red-50" : "border-surface-border hover:border-accent"}`}
+                      >
+                        <input
+                          type="file"
+                          className="sr-only"
+                          accept="image/*,application/pdf"
+                          onChange={(e) => { setReceipt(e.target.files?.[0] ?? null); setFieldErr((p) => ({ ...p, receipt: undefined })); }}
+                        />
+                        {receipt
+                          ? <><CheckCircle className="w-7 h-7 text-emerald-500 mb-2" /><p className="text-sm font-bold text-primary">{receipt.name}</p></>
+                          : <>
+                              <Upload className="w-7 h-7 text-[#8897A9] group-hover:text-accent mb-2 transition-colors" />
+                              <p className="text-sm font-bold text-primary">Click to upload</p>
+                              <p className="text-xs text-[#8897A9]">PNG, JPG, PDF up to 10MB</p>
+                            </>}
+                      </label>
+                    </Field>
                   </div>
                 )}
-             </div>
-           )}
+
+                <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                  <button
+                    onClick={() => { setStep(1); setFieldErr({}); }}
+                    className="sm:w-28 btn-ghost text-sm"
+                  >
+                    ← Back
+                  </button>
+                  <button
+                    onClick={handleDepositSubmit}
+                    disabled={loading}
+                    className="flex-1 btn-primary flex items-center justify-center gap-2"
+                  >
+                    {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+                    {loading ? "Submitting…" : "Submit Deposit Proof"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+
+      ) : (
+        /* ── WITHDRAW ──────────────────────────────────────────────────────── */
+        <div className="max-w-xl">
+          <div className="bg-white border border-surface-border rounded-xl p-6 sm:p-8 shadow-card space-y-5">
+            <h3 className="font-display font-bold text-xl text-primary">Withdraw Funds</h3>
+
+            {walletBal !== null && (
+              <div className="flex items-center justify-between bg-surface rounded-xl p-4 border border-surface-border">
+                <span className="text-sm text-[#8897A9]">Available Balance</span>
+                <span className="font-bold text-primary">
+                  ${parseFloat(walletBal).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+            )}
+
+            <Field label="Amount (USD)" error={fieldErr.wAmount}>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-primary">$</span>
+                <input
+                  type="number"
+                  value={wForm.amount}
+                  onChange={(e) => { setWForm((p) => ({ ...p, amount: e.target.value })); setFieldErr((p) => ({ ...p, wAmount: undefined })); }}
+                  placeholder="0.00"
+                  className={`input-field pl-8 font-bold ${fieldErr.wAmount ? "border-red-400" : ""}`}
+                />
+              </div>
+            </Field>
+
+            <Field label="Account Holder Name" error={fieldErr.accountName}>
+              <input
+                type="text"
+                value={wForm.accountName}
+                onChange={(e) => { setWForm((p) => ({ ...p, accountName: e.target.value })); setFieldErr((p) => ({ ...p, accountName: undefined })); }}
+                placeholder="As it appears on your bank"
+                className={`input-field ${fieldErr.accountName ? "border-red-400" : ""}`}
+              />
+            </Field>
+
+            <Field label="Bank Name" error={fieldErr.bankName}>
+              <input
+                type="text"
+                value={wForm.bankName}
+                onChange={(e) => { setWForm((p) => ({ ...p, bankName: e.target.value })); setFieldErr((p) => ({ ...p, bankName: undefined })); }}
+                placeholder="e.g. GTBank, Access Bank"
+                className={`input-field ${fieldErr.bankName ? "border-red-400" : ""}`}
+              />
+            </Field>
+
+            <Field label="Account Number" error={fieldErr.accountNumber}>
+              <input
+                type="text"
+                value={wForm.accountNumber}
+                onChange={(e) => { setWForm((p) => ({ ...p, accountNumber: e.target.value })); setFieldErr((p) => ({ ...p, accountNumber: undefined })); }}
+                placeholder="10-digit account number"
+                className={`input-field ${fieldErr.accountNumber ? "border-red-400" : ""}`}
+              />
+            </Field>
+
+            <div className="bg-amber-50 border border-amber-100 rounded-lg p-4 flex gap-3">
+              <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-amber-800">
+                KYC must be approved before withdrawal. Processing takes 1–3 business days.
+              </p>
+            </div>
+
+            <button
+              onClick={handleWithdraw}
+              disabled={wLoading}
+              className="w-full btn-primary py-4 flex items-center justify-center gap-2"
+            >
+              {wLoading
+                ? <><Loader2 className="w-5 h-5 animate-spin" /> Processing…</>
+                : <>Request Withdrawal <ArrowRight className="w-4 h-4" /></>}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {toast && <Toast message={toast.message} type={toast.type} onDone={() => setToast(null)} />}
     </div>
   );
 }
