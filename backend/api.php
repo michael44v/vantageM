@@ -69,10 +69,15 @@ case 'admin_get_users':
 case 'admin_dashboard_stats':
     handle_admin_dashboard_stats($db);
     break;
+case 'admin_get_transactions':
+    handle_admin_get_transactions($db);
+    break;
 case 'admin_approve_transaction':
     handle_admin_approve_transaction($db, $input);
     break;
-    
+case 'admin_reject_transaction':
+    handle_admin_reject_transaction($db, $input);
+    break;
     
     case 'login':
         handle_login($db, $input);
@@ -187,7 +192,25 @@ function handle_upload_kyc($db) {
 }
 
 function handle_deposit($db, $input) {
-    send_json(['success' => true, 'message' => 'Deposit initiated', 'url' => 'https://commerce.coinbase.com/charges/mock']);
+    $user_id = get_auth_user_id();
+    if (!$user_id) send_json(['success' => false, 'error' => 'Unauthorized'], 401);
+
+    $amount      = (float)($input['amount']      ?? 0);
+    $receipt_url = $db->real_escape_string($input['receipt_url'] ?? '');
+    $tx_hash     = $db->real_escape_string($input['tx_hash']     ?? '');
+    $method      = $db->real_escape_string($input['method']      ?? 'manual');
+
+    if ($amount <= 0) send_json(['success' => false, 'error' => 'Invalid amount.'], 400);
+
+    $reference = 'DEP-' . strtoupper(bin2hex(random_bytes(4)));
+
+    $sql = "INSERT INTO transactions (user_id, reference, type, amount, method, status, receipt_url, tx_hash)
+            VALUES ($user_id, '$reference', 'deposit', $amount, '$method', 'pending', '$receipt_url', '$tx_hash')";
+
+    if ($db->query($sql)) {
+        send_json(['success' => true, 'message' => 'Deposit proof submitted. Under review.']);
+    }
+    send_json(['success' => false, 'error' => $db->error], 500);
 }
 
 function handle_execute_trade($db, $input) {
@@ -478,4 +501,29 @@ function handle_admin_approve_transaction($db, $input) {
     }
  
     send_json(['success' => true, 'message' => 'Transaction approved and wallet credited.']);
+}
+
+function handle_admin_reject_transaction($db, $input) {
+    $txn_id = (int)($input['transaction_id'] ?? 0);
+    $notes  = $db->real_escape_string($input['notes'] ?? '');
+
+    if (!$txn_id) send_json(['success' => false, 'error' => 'Missing transaction_id.'], 400);
+
+    $res = $db->query("SELECT * FROM transactions WHERE id = $txn_id LIMIT 1");
+    $txn = $res->fetch_assoc();
+    if (!$txn) send_json(['success' => false, 'error' => 'Transaction not found.'], 404);
+    if ($txn['status'] !== 'pending') send_json(['success' => false, 'error' => 'Transaction is not pending.'], 409);
+
+    $db->query("UPDATE transactions SET status = 'rejected', notes = '$notes' WHERE id = $txn_id");
+
+    send_json(['success' => true, 'message' => 'Transaction rejected.']);
+}
+
+function handle_admin_get_transactions($db) {
+    $sql = "SELECT t.*, u.name as user_name, u.email as user_email
+            FROM transactions t
+            JOIN users u ON t.user_id = u.id
+            ORDER BY t.created_at DESC";
+    $res = $db->query($sql);
+    send_json(['success' => true, 'data' => $res->fetch_all(MYSQLI_ASSOC)]);
 }

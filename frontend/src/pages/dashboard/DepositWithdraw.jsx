@@ -3,7 +3,7 @@ import {
   Wallet, ArrowRight, AlertCircle, Loader2, Upload,
   CheckCircle, Copy, RefreshCw,
 } from "lucide-react";
-import { paymentService, accountService } from "../../services/api";
+import { paymentService, accountService, uploadToCloudinary } from "../../services/api";
 
 // ── Wallet addresses ──────────────────────────────────────────────────────────
 const CRYPTO_WALLETS = [
@@ -168,18 +168,18 @@ export default function DepositWithdraw() {
     if (!validateStep2()) return;
     setLoading(true);
     try {
-      const res = await paymentService.initiateDeposit({
-        amount:   parseFloat(amount),
+      // 1. Upload receipt to Cloudinary
+      const { secure_url } = await uploadToCloudinary(receipt, "vantage_deposits");
+
+      // 2. Submit to backend
+      await paymentService.initiateDeposit({
+        amount: parseFloat(amount),
         currency: "USD",
+        receiptUrl: secure_url,
+        txHash: txRef,
+        method: method === "crypto" ? `crypto_${selectedCrypto.symbol}` : "bank_wire"
       });
 
-      // If the backend returns a hosted checkout URL, redirect there
-      if (res.url && res.url !== "https://commerce.coinbase.com/charges/mock") {
-        window.location.href = res.url;
-        return;
-      }
-
-      // Otherwise treat as manual proof submission (current stub behaviour)
       setToast({ message: "Deposit proof submitted! Credited within 24h.", type: "success" });
       setStep(1);
       setAmount("");

@@ -20,6 +20,39 @@ export const getToken   = ()      => localStorage.getItem("vm_token");
 export const setToken   = (tok)   => localStorage.setItem("vm_token", tok);
 export const clearToken = ()      => localStorage.removeItem("vm_token");
 
+// ── Cloudinary helper ─────────────────────────────────────────────────────────
+/**
+ * Uploads a file to Cloudinary.
+ * @param {File} file
+ * @param {string} folder
+ * @returns {Promise<{secure_url: string, public_id: string}>}
+ */
+export async function uploadToCloudinary(file, folder = "vantage_general") {
+  if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_UPLOAD_PRESET) {
+    throw new Error(
+      "Cloudinary is not configured. " +
+      "Set VITE_CLOUDINARY_CLOUD_NAME and VITE_CLOUDINARY_UPLOAD_PRESET in your .env"
+    );
+  }
+
+  const cfForm = new FormData();
+  cfForm.append("file",           file);
+  cfForm.append("upload_preset",  CLOUDINARY_UPLOAD_PRESET);
+  cfForm.append("folder",         folder);
+
+  const cfRes = await fetch(
+    `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/auto/upload`,
+    { method: "POST", body: cfForm }
+  );
+
+  if (!cfRes.ok) {
+    const err = await cfRes.json();
+    throw new Error(err.error?.message || "Cloudinary upload failed.");
+  }
+
+  return cfRes.json();
+}
+
 // ── Core request helper ───────────────────────────────────────────────────────
 /**
  * @param {string} action        ?action= value
@@ -196,29 +229,7 @@ export const kycService = {
    */
   upload: async (file, docType = "identity") => {
     // ── Step 1: Cloudinary upload ──────────────────────────────────────────
-    if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_UPLOAD_PRESET) {
-      throw new Error(
-        "Cloudinary is not configured. " +
-        "Set VITE_CLOUDINARY_CLOUD_NAME and VITE_CLOUDINARY_UPLOAD_PRESET in your .env"
-      );
-    }
-
-    const cfForm = new FormData();
-    cfForm.append("file",           file);
-    cfForm.append("upload_preset",  CLOUDINARY_UPLOAD_PRESET);
-    cfForm.append("folder",         "vantage_kyc");
-
-    const cfRes = await fetch(
-      `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/auto/upload`,
-      { method: "POST", body: cfForm }
-    );
-
-    if (!cfRes.ok) {
-      const err = await cfRes.json();
-      throw new Error(err.error?.message || "Cloudinary upload failed.");
-    }
-
-    const { secure_url, public_id } = await cfRes.json();
+    const { secure_url, public_id } = await uploadToCloudinary(file, "vantage_kyc");
 
     // ── Step 2: Backend registration ──────────────────────────────────────
     const backendForm = new FormData();
@@ -249,18 +260,18 @@ export const kycService = {
 export const paymentService = {
   /**
    * POST ?action=deposit
-   * Payload: { amount, currency }
-   * PHP returns: { success, message, url }
-   *
-   * NOTE: The current PHP handle_deposit() is a stub that returns a mock URL.
-   * When you wire up a real payment processor, the caller should do:
-   *   const res = await paymentService.initiateDeposit({ amount, currency });
-   *   if (res.url) window.location.href = res.url;
+   * Payload: { amount, currency, receipt_url, tx_hash, method }
    */
-  initiateDeposit: ({ amount, currency = "USD" }) =>
+  initiateDeposit: ({ amount, currency = "USD", receiptUrl, txHash, method = "manual" }) =>
     req("deposit", {
       method: "POST",
-      body: { amount: parseFloat(amount), currency },
+      body: {
+        amount: parseFloat(amount),
+        currency,
+        receipt_url: receiptUrl,
+        tx_hash: txHash,
+        method
+      },
     }),
 };
 
@@ -383,6 +394,11 @@ export const adminService = {
   getDashboardStats: () => req("admin_dashboard_stats"),
 
   /**
+   * GET ?action=admin_get_transactions
+   */
+  getTransactions: () => req("admin_get_transactions"),
+
+  /**
    * POST ?action=admin_approve_transaction
    * Payload: { transaction_id }
    * PHP marks transaction completed and credits wallet for deposits.
@@ -391,5 +407,15 @@ export const adminService = {
     req("admin_approve_transaction", {
       method: "POST",
       body: { transaction_id: id },
+    }),
+
+  /**
+   * POST ?action=admin_reject_transaction
+   * Payload: { transaction_id, notes }
+   */
+  rejectTransaction: (id, notes = "") =>
+    req("admin_reject_transaction", {
+      method: "POST",
+      body: { transaction_id: id, notes },
     }),
 };

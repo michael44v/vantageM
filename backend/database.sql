@@ -247,3 +247,16 @@ VALUES (2, '8800123', 'raw_ecn', FALSE, 5000.00, 500);
 
 INSERT INTO `trading_accounts` (`user_id`, `account_number`, `type`, `is_demo`, `balance`, `leverage`)
 VALUES (2, '9900456', 'standard_stp', TRUE, 10000.00, 500);
+
+-- Dummy Signal Providers
+INSERT INTO `signals` (`user_id`, `name`, `description`, `roi`, `win_rate`, `drawdown`, `subscribers`, `status`)
+VALUES
+(1, 'Alpha Elite Strategy', 'High-frequency trading on major forex pairs.', 145.20, 78.50, 12.30, 1250, 'active'),
+(1, 'Steady Gains AI', 'Low-risk algorithmic trading focusing on stability.', 42.15, 89.20, 4.50, 840, 'active'),
+(1, 'Crypto Whale Tracker', 'Following large movements in the BTC and ETH markets.', 210.80, 65.00, 25.40, 3100, 'active');
+
+-- Dummy Copy Relationships for Demo Trader (user_id 2)
+INSERT INTO `copy_relationships` (`copier_id`, `provider_id`, `trading_account_id`, `risk_multiplier`, `status`)
+VALUES
+(2, 1, 1, 1.00, 'active'),
+(2, 2, 1, 0.50, 'active');
