@@ -1,38 +1,73 @@
-import { useState } from "react";
-import { Search, Check, X } from "lucide-react";
-import { adminTransactions } from "../../data/mockData";
+import { useState, useEffect, useCallback } from "react";
+import { Search, Check, X, ExternalLink, Loader2 } from "lucide-react";
+import { adminService } from "../../services/api";
 import { Badge } from "../../components/ui";
 
-const extra = [
-  { id: "TXN-00416", user: "Priya Nair", type: "Deposit", amount: "$800", method: "Credit Card", status: "Completed", date: "2024-03-30" },
-  { id: "TXN-00415", user: "James Okonkwo", type: "Withdrawal", amount: "$2,500", method: "Bank Wire", status: "Rejected", date: "2024-03-29" },
-  { id: "TXN-00414", user: "Mikael Johansson", type: "Deposit", amount: "$4,000", method: "Bank Wire", status: "Completed", date: "2024-03-28" },
-];
-
 function statusVariant(s) {
-  return { Completed: "success", Pending: "warning", Processing: "neutral", Rejected: "danger" }[s] || "neutral";
+  const normalized = s?.toLowerCase();
+  if (normalized === "completed") return "success";
+  if (normalized === "pending") return "warning";
+  if (normalized === "processing") return "neutral";
+  if (normalized === "rejected") return "danger";
+  return "neutral";
 }
 
 export default function AdminTransactions() {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
-  const [txns, setTxns] = useState([...adminTransactions, ...extra]);
+  const [txns, setTxns] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const approve = (id) => setTxns((prev) => prev.map((t) => t.id === id ? { ...t, status: "Completed" } : t));
-  const reject = (id) => setTxns((prev) => prev.map((t) => t.id === id ? { ...t, status: "Rejected" } : t));
+  const fetchTxns = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await adminService.getTransactions();
+      setTxns(res.data || []);
+    } catch (err) {
+      console.error("Failed to fetch transactions", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchTxns();
+  }, [fetchTxns]);
+
+  const approve = async (id) => {
+    try {
+      await adminService.approveTransaction(id);
+      fetchTxns();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const reject = async (id) => {
+    const reason = prompt("Reason for rejection:");
+    if (reason === null) return;
+    try {
+      await adminService.rejectTransaction(id, reason);
+      fetchTxns();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
 
   const filtered = txns.filter((t) => {
-    const matchSearch = t.user.toLowerCase().includes(search.toLowerCase()) || t.id.toLowerCase().includes(search.toLowerCase());
-    const matchType = typeFilter === "All" || t.type === typeFilter;
-    const matchStatus = statusFilter === "All" || t.status === statusFilter;
+    const userStr = t.user_name || "";
+    const refStr = t.reference || "";
+    const matchSearch = userStr.toLowerCase().includes(search.toLowerCase()) || refStr.toLowerCase().includes(search.toLowerCase());
+    const matchType = typeFilter === "All" || t.type.toLowerCase() === typeFilter.toLowerCase();
+    const matchStatus = statusFilter === "All" || t.status.toLowerCase() === statusFilter.toLowerCase();
     return matchSearch && matchType && matchStatus;
   });
 
   const totals = {
-    deposits: txns.filter((t) => t.type === "Deposit" && t.status === "Completed").length,
-    withdrawals: txns.filter((t) => t.type === "Withdrawal" && t.status === "Completed").length,
-    pending: txns.filter((t) => t.status === "Pending").length,
+    deposits: txns.filter((t) => t.type.toLowerCase() === "deposit" && t.status.toLowerCase() === "completed").length,
+    withdrawals: txns.filter((t) => t.type.toLowerCase() === "withdrawal" && t.status.toLowerCase() === "completed").length,
+    pending: txns.filter((t) => t.status.toLowerCase() === "pending").length,
   };
 
   return (
@@ -92,39 +127,75 @@ export default function AdminTransactions() {
               </tr>
             </thead>
             <tbody className="divide-y divide-surface-border">
-              {filtered.map((tx) => (
-                <tr key={tx.id} className="hover:bg-surface/50 transition-colors group">
-                  <td className="px-5 py-4 font-mono text-xs font-bold text-primary">{tx.id}</td>
-                  <td className="px-5 py-4 text-sm font-semibold text-primary">{tx.user}</td>
-                  <td className="px-5 py-4">
-                    <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${tx.type === "Deposit" ? "bg-teal/10 text-teal" : "bg-accent/10 text-accent"}`}>
-                      {tx.type}
-                    </span>
-                  </td>
-                  <td className="px-5 py-4 font-display font-bold text-sm text-primary">{tx.amount}</td>
-                  <td className="px-5 py-4 text-xs text-[#4A5568]">{tx.method}</td>
-                  <td className="px-5 py-4"><Badge variant={statusVariant(tx.status)}>{tx.status}</Badge></td>
-                  <td className="px-5 py-4 text-xs text-[#8897A9]">{tx.date}</td>
-                  <td className="px-5 py-4">
-                    {(tx.status === "Pending" || tx.status === "Processing") && (
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          onClick={() => approve(tx.id)}
-                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-[7px] bg-teal/10 text-teal text-xs font-semibold hover:bg-teal hover:text-white transition-all"
-                        >
-                          <Check className="w-3 h-3" /> Approve
-                        </button>
-                        <button
-                          onClick={() => reject(tx.id)}
-                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-[7px] bg-red-50 text-red-500 text-xs font-semibold hover:bg-red-500 hover:text-white transition-all"
-                        >
-                          <X className="w-3 h-3" /> Reject
-                        </button>
-                      </div>
-                    )}
+              {loading ? (
+                <tr>
+                  <td colSpan={8} className="px-5 py-10 text-center">
+                    <Loader2 className="w-6 h-6 animate-spin mx-auto text-accent mb-2" />
+                    <span className="text-sm text-[#8897A9]">Loading transactions...</span>
                   </td>
                 </tr>
-              ))}
+              ) : filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-5 py-10 text-center text-sm text-[#8897A9]">
+                    No transactions found.
+                  </td>
+                </tr>
+              ) : (
+                filtered.map((tx) => (
+                  <tr key={tx.id} className="hover:bg-surface/50 transition-colors group">
+                    <td className="px-5 py-4 font-mono text-xs font-bold text-primary">
+                      <div className="flex flex-col">
+                        <span>{tx.reference}</span>
+                        {tx.tx_hash && <span className="text-[10px] text-[#8897A9] truncate max-w-[120px]">{tx.tx_hash}</span>}
+                      </div>
+                    </td>
+                    <td className="px-5 py-4">
+                      <div className="text-sm font-semibold text-primary">{tx.user_name}</div>
+                      <div className="text-[11px] text-[#8897A9]">{tx.user_email}</div>
+                    </td>
+                    <td className="px-5 py-4">
+                      <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-tight ${tx.type.toLowerCase() === "deposit" ? "bg-teal/10 text-teal" : "bg-accent/10 text-accent"}`}>
+                        {tx.type}
+                      </span>
+                    </td>
+                    <td className="px-5 py-4 font-display font-bold text-sm text-primary">
+                      ${parseFloat(tx.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                    </td>
+                    <td className="px-5 py-4">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs text-[#4A5568] capitalize">{tx.method.replace(/_/g, " ")}</span>
+                        {tx.receipt_url && (
+                          <a href={tx.receipt_url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-accent font-bold flex items-center gap-0.5 hover:underline">
+                            View Receipt <ExternalLink className="w-2.5 h-2.5" />
+                          </a>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-5 py-4"><Badge variant={statusVariant(tx.status)}>{tx.status}</Badge></td>
+                    <td className="px-5 py-4 text-xs text-[#8897A9]">
+                      {new Date(tx.created_at).toLocaleDateString()}
+                    </td>
+                    <td className="px-5 py-4">
+                      {(tx.status.toLowerCase() === "pending" || tx.status.toLowerCase() === "processing") && (
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => approve(tx.id)}
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-[7px] bg-teal/10 text-teal text-[10px] font-bold hover:bg-teal hover:text-white transition-all uppercase"
+                          >
+                            <Check className="w-3 h-3" /> Approve
+                          </button>
+                          <button
+                            onClick={() => reject(tx.id)}
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-[7px] bg-red-50 text-red-500 text-[10px] font-bold hover:bg-red-500 hover:text-white transition-all uppercase"
+                          >
+                            <X className="w-3 h-3" /> Reject
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
