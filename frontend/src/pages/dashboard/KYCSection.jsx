@@ -24,28 +24,31 @@ function Toast({ message, type = "success", onDone }) {
   );
 }
 
+const CLOUDINARY_CLOUD  = "dguvkirdr";
+const CLOUDINARY_PRESET = "futyApp";
+
 function UploadZone({ docType, onUploaded, disabled }) {
-  const [file, setFile]         = useState(null);
-  const [progress, setProgress] = useState(""); // "compressing" | "cloudinary" | "backend" | ""
-  const [error, setError]       = useState("");
+  const [file,     setFile]     = useState(null);
+  const [progress, setProgress] = useState(""); // "cloudinary"|"saving"|""
+  const [error,    setError]    = useState("");
 
   const handleFile = async (raw) => {
     if (!raw) return;
     if (raw.size > 10 * 1024 * 1024) { setError("File must be under 10MB."); return; }
     setFile(raw);
     setError("");
-    setProgress("cloudinary");
 
     try {
-      // ── Step 1: Upload to Cloudinary ──────────────────────────────
-      const cfForm = new FormData();
-      cfForm.append("file", raw);
-      cfForm.append("upload_preset", import.meta.env.VITE_CLOUDINARY_PRESET); // set in .env
-      cfForm.append("folder", "vantage_kyc");
+      // Step 1 — Cloudinary only
+      setProgress("cloudinary");
+      const form = new FormData();
+      form.append("file",          raw);
+      form.append("upload_preset", CLOUDINARY_PRESET);
+      form.append("folder",        "vantage_kyc");
 
       const cfRes = await fetch(
-        `https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD}/auto/upload`,
-        { method: "POST", body: cfForm }
+        `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/auto/upload`,
+        { method: "POST", body: form }
       );
       if (!cfRes.ok) {
         const e = await cfRes.json();
@@ -53,9 +56,9 @@ function UploadZone({ docType, onUploaded, disabled }) {
       }
       const { secure_url, public_id } = await cfRes.json();
 
-      // ── Step 2: Send URL to backend ───────────────────────────────
-      setProgress("backend");
-      await kycService.upload(raw, docType); // api.js already handles both steps
+      // Step 2 — Send only the URL to backend (no file re-upload)
+      setProgress("saving");
+      await kycService.registerDocument({ docType, fileUrl: secure_url, publicId: public_id });
 
       setProgress("");
       onUploaded();
@@ -65,40 +68,30 @@ function UploadZone({ docType, onUploaded, disabled }) {
     }
   };
 
-  const progressLabel = {
-    cloudinary: "Uploading to cloud…",
-    backend:    "Saving record…",
-  }[progress] || "";
+  const label = progress === "cloudinary" ? "Uploading to cloud…"
+              : progress === "saving"     ? "Saving document…"
+              : null;
 
   return (
     <div className="space-y-2">
-      <label className={`border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center text-center cursor-pointer group transition-colors ${error ? "border-red-300 bg-red-50" : "border-surface-border hover:border-accent"} ${disabled ? "opacity-50 pointer-events-none" : ""}`}>
-        <input type="file" className="sr-only" accept="image/*,application/pdf" disabled={disabled || !!progress}
+      <label className={`border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center text-center cursor-pointer group transition-colors
+        ${error ? "border-red-300 bg-red-50" : "border-surface-border hover:border-accent"}
+        ${disabled || progress ? "opacity-50 pointer-events-none" : ""}`}>
+        <input type="file" className="sr-only" accept="image/*,application/pdf"
+          disabled={disabled || !!progress}
           onChange={(e) => handleFile(e.target.files?.[0])} />
-        {progress ? (
-          <>
-            <Loader2 className="w-8 h-8 text-accent animate-spin mb-2" />
-            <p className="text-sm font-bold text-primary">{progressLabel}</p>
-          </>
+        {label ? (
+          <><Loader2 className="w-8 h-8 text-accent animate-spin mb-2" /><p className="text-sm font-bold text-primary">{label}</p></>
         ) : file && !error ? (
-          <>
-            <CheckCircle className="w-8 h-8 text-emerald-500 mb-2" />
-            <p className="text-sm font-bold text-primary">{file.name}</p>
-            <p className="text-xs text-[#8897A9]">Click to replace</p>
-          </>
+          <><CheckCircle className="w-8 h-8 text-emerald-500 mb-2" /><p className="text-sm font-bold text-primary">{file.name}</p><p className="text-xs text-[#8897A9]">Click to replace</p></>
         ) : (
-          <>
-            <Upload className="w-8 h-8 text-[#8897A9] group-hover:text-accent mb-2 transition-colors" />
-            <p className="text-sm font-bold text-primary">Click to upload or drag & drop</p>
-            <p className="text-xs text-[#8897A9]">PNG, JPG, PDF up to 10MB</p>
-          </>
+          <><Upload className="w-8 h-8 text-[#8897A9] group-hover:text-accent mb-2 transition-colors" /><p className="text-sm font-bold text-primary">Click to upload or drag & drop</p><p className="text-xs text-[#8897A9]">PNG, JPG, PDF up to 10MB</p></>
         )}
       </label>
       {error && <p className="text-xs text-red-500">{error}</p>}
     </div>
   );
 }
-
 export default function KYCSection() {
   const { user } = useAuth();
   const [docs, setDocs]       = useState([]);
@@ -109,17 +102,15 @@ export default function KYCSection() {
   // Which docType is open for upload
   const [activeUpload, setActiveUpload] = useState(null); // "identity" | "address" | null
 
-  const fetchDocs = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await kycService.getStatus();
-      setDocs(Array.isArray(res.data) ? res.data : []);
-    } catch (_) {
-      // non-fatal — show empty state
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+// In KYCSection.jsx — update fetchDocs:
+const fetchDocs = useCallback(async () => {
+  setLoading(true);
+  try {
+    const res = await kycService.getDocuments(); // was getStatus()
+    setDocs(Array.isArray(res.data) ? res.data : []);
+  } catch (_) {}
+  finally { setLoading(false); }
+}, []);
 
   useEffect(() => { fetchDocs(); }, [fetchDocs]);
 

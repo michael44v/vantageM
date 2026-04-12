@@ -13,7 +13,7 @@ const BASE_URL = "https://vantagemarketts.com/backend/";
 
 // ── Cloudinary config (from .env) ─────────────────────────────────────────────
 const CLOUDINARY_CLOUD_NAME    = "dguvkirdr";
-const CLOUDINARY_UPLOAD_PRESET = "ablemarkets"
+const CLOUDINARY_UPLOAD_PRESET = "ablemarkets";
 
 // ── Token helpers ─────────────────────────────────────────────────────────────
 export const getToken   = ()      => localStorage.getItem("vm_token");
@@ -28,6 +28,47 @@ export const clearToken = ()      => localStorage.removeItem("vm_token");
  * @param {object}  opts.body    JSON body for POST
  * @param {object}  opts.params  Extra query-string params
  */
+
+
+// ── Mail base URL (separate PHP file) ─────────────────────────────────────────
+const MAIL_URL = "https://vantagemarketts.com/backend/mails.php";
+
+// ── Mail request helper (separate from main req() since different base URL) ───
+async function mailReq(action, body = {}) {
+  const url = new URL(MAIL_URL);
+  url.searchParams.set("action", action);
+
+  try {
+    const res  = await fetch(url.toString(), {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify(body),
+    });
+    const data = await res.json();
+    return data;
+  } catch (err) {
+    console.error("Mail request failed:", err);
+    return { success: false, error: err.message };
+  }
+}
+
+// ── Mail service ──────────────────────────────────────────────────────────────
+export const mailService = {
+  /**
+   * Sends the registration confirmation / welcome email.
+   * Called fire-and-forget after authService.register() succeeds.
+   */
+registerConfirm: ({ firstName, lastName, email, verifyToken }) =>
+  mailReq("send_mail", {
+    first_name:   firstName,
+    last_name:    lastName,
+    email,
+    verify_token: verifyToken,
+  }),
+};
+
+
+
 async function req(action, { method = "GET", body = null, params = {} } = {}) {
   const url = new URL(BASE_URL);
   url.searchParams.set("action", action);
@@ -59,6 +100,23 @@ export const authService = {
    * POST ?action=login
    * PHP returns: { success, token, user: { id, name, role, email } }
    */
+
+  // Add to authService:
+verifyEmailToken: async (token) => {
+  const res = await req("verify_email_token", {
+    method: "POST",
+    body: { token },
+  });
+  if (res.token) setToken(res.token);
+  return res;
+},
+
+resendVerification: (userId) =>
+  req("resend_verification", {
+    method: "POST",
+    body: { user_id: userId },
+  }),
+
   login: async ({ email, password }) => {
     const res = await req("login", { method: "POST", body: { email, password } });
     if (res.token) setToken(res.token);
@@ -146,21 +204,34 @@ export const accountService = {
    * @param {Array}  accounts   Full account list to resolve id
    */
   internalTransfer: ({ from, to, amount, accounts }) => {
-    const isFromWallet = from === "wallet";
-    const accountId    = isFromWallet ? to : from;
-    const account      = accounts.find((a) => String(a.id) === String(accountId));
+  const isFromWallet = from === "wallet";
+  const isToWallet   = to   === "wallet";
 
-    if (!account) throw new Error("Could not resolve account for transfer.");
+  // If transferring wallet → account, resolve the destination account
+  // If transferring account → wallet, resolve the source account
+  const accountId = isFromWallet ? to : from;
 
-    return req("internal_transfer", {
-      method: "POST",
-      body: {
-        account_id: account.id,
-        amount:     parseFloat(amount),
-        direction:  isFromWallet ? "wallet_to_acc" : "acc_to_wallet",
-      },
-    });
-  },
+  // "wallet" on either side is valid — only resolve if it's an account id
+  let account = null;
+  if (accountId !== "wallet") {
+    account = accounts.find((a) => String(a.id) === String(accountId));
+    if (!account) {
+      throw new Error(
+        `Could not resolve account (id: ${accountId}). ` +
+        `Available: ${accounts.map((a) => a.id).join(", ")}`
+      );
+    }
+  }
+
+  return req("internal_transfer", {
+    method: "POST",
+    body: {
+      account_id: account?.id ?? accountId,
+      amount:     parseFloat(amount),
+      direction:  isFromWallet ? "wallet_to_acc" : "acc_to_wallet",
+    },
+  });
+},
 
   /**
    * POST ?action=update_leverage
@@ -175,94 +246,67 @@ export const accountService = {
 
 // ── KYC ───────────────────────────────────────────────────────────────────────
 export const kycService = {
-  /**
-   * GET ?action=get_kyc
-   * Returns: { success, data: [{ id, document_type, file_url, status,
-   *             rejection_reason, created_at }] }
-   */
   getDocuments: () => req("get_kyc"),
 
   /**
-   * Two-step upload:
-   *   1. Upload file to Cloudinary (unsigned preset) → get secure_url
-   *   2. POST ?action=upload_kyc via FormData with:
-   *        file          — the original File object (PHP $_FILES fallback)
-   *        document_type — "identity" | "address"
-   *        file_url      — Cloudinary secure_url  ← PHP prefers this
-   *        public_id     — Cloudinary public_id   (extra metadata)
-   *
-   * @param {File}   file
-   * @param {string} docType   "identity" | "address"
+   * Two-step: Cloudinary upload happens in the component.
+   * This method ONLY registers the URL in the backend.
    */
-  upload: async (file, docType = "identity") => {
-    // ── Step 1: Cloudinary upload ──────────────────────────────────────────
-    if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_UPLOAD_PRESET) {
-      throw new Error(
-        "Cloudinary is not configured. " +
-        "Set VITE_CLOUDINARY_CLOUD_NAME and VITE_CLOUDINARY_UPLOAD_PRESET in your .env"
-      );
-    }
-
-    const cfForm = new FormData();
-    cfForm.append("file",           file);
-    cfForm.append("upload_preset",  CLOUDINARY_UPLOAD_PRESET);
-    cfForm.append("folder",         "vantage_kyc");
-
-    const cfRes = await fetch(
-      `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/auto/upload`,
-      { method: "POST", body: cfForm }
-    );
-
-    if (!cfRes.ok) {
-      const err = await cfRes.json();
-      throw new Error(err.error?.message || "Cloudinary upload failed.");
-    }
-
-    const { secure_url, public_id } = await cfRes.json();
-
-    // ── Step 2: Backend registration ──────────────────────────────────────
-    const backendForm = new FormData();
-    backendForm.append("file",          file);          // satisfies PHP $_FILES check
-    backendForm.append("document_type", docType);
-    backendForm.append("file_url",      secure_url);
-    backendForm.append("public_id",     public_id);
-
-    const token = getToken();
-    const backendRes = await fetch(`${BASE_URL}?action=upload_kyc`, {
-      method:      "POST",
-      credentials: "include",
-      headers:     token ? { Authorization: `Bearer ${token}` } : {},
-      body:        backendForm,
-      // NOTE: Do NOT set Content-Type here — browser sets it automatically
-      //       with the correct multipart boundary when using FormData.
-    });
-
-    const backendData = await backendRes.json();
-    if (!backendRes.ok || backendData.success === false) {
-      throw new Error(backendData.error || "KYC submission failed.");
-    }
-    return backendData;
-  },
+  registerDocument: ({ docType, fileUrl, publicId }) =>
+    req("upload_kyc_url", {
+      method: "POST",
+      body: {
+        document_type: docType,
+        file_url:      fileUrl,
+        public_id:     publicId,
+      },
+    }),
 };
 
 // ── Payments ──────────────────────────────────────────────────────────────────
 export const paymentService = {
   /**
-   * POST ?action=deposit
-   * Payload: { amount, currency }
-   * PHP returns: { success, message, url }
-   *
-   * NOTE: The current PHP handle_deposit() is a stub that returns a mock URL.
-   * When you wire up a real payment processor, the caller should do:
-   *   const res = await paymentService.initiateDeposit({ amount, currency });
-   *   if (res.url) window.location.href = res.url;
+   * POST ?action=submit_deposit
+   * Saves deposit request with Cloudinary receipt URL to DB.
    */
-  initiateDeposit: ({ amount, currency = "USD" }) =>
-    req("deposit", {
+
+  // Add to paymentService:
+getTransactions: ({ type = "all", status = "", page = 1 } = {}) =>
+  req("get_transactions", {
+    params: { type, status, page, per_page: 15 },
+  }),
+
+  submitDeposit: ({ amount, currency = "USD", method, cryptoSymbol, txRef, receiptUrl }) =>
+    req("submit_deposit", {
       method: "POST",
-      body: { amount: parseFloat(amount), currency },
+      body: {
+        amount,
+        currency,
+        method,
+        crypto_symbol: cryptoSymbol || undefined,
+        tx_ref:        txRef,
+        receipt_url:   receiptUrl,
+      },
+    }),
+
+  /**
+   * POST ?action=submit_withdrawal
+   */
+  submitWithdrawal: ({ amount, method, bankName, accountName, accountNumber, cryptoSymbol, cryptoAddress }) =>
+    req("submit_withdrawal", {
+      method: "POST",
+      body: {
+        amount,
+        method,
+        bank_name:       bankName       || undefined,
+        account_name:    accountName    || undefined,
+        account_number:  accountNumber  || undefined,
+        crypto_symbol:   cryptoSymbol   || undefined,
+        crypto_address:  cryptoAddress  || undefined,
+      },
     }),
 };
+
 
 // ── Trading ───────────────────────────────────────────────────────────────────
 export const tradingService = {
@@ -332,21 +376,10 @@ export const tradingService = {
 };
 
 // ── Copy Trading ──────────────────────────────────────────────────────────────
+// Add to copyTradingService:
 export const copyTradingService = {
-  /**
-   * GET ?action=get_signals
-   * Returns active signal providers joined with the user name.
-   * { success, data: [{ id, name, description, roi, win_rate,
-   *                     drawdown, subscribers, provider_name }] }
-   */
   getProviders: () => req("get_signals"),
 
-  /**
-   * POST ?action=copy_signal
-   * Payload: { provider_id, trading_account_id, risk_multiplier }
-   * PHP upserts copy_relationships row.
-   * Returns: { success, message, data: { copy_id } }
-   */
   copyProvider: ({ providerId, tradingAccountId, riskMultiplier = 1.0 }) =>
     req("copy_signal", {
       method: "POST",
@@ -355,6 +388,15 @@ export const copyTradingService = {
         trading_account_id: tradingAccountId,
         risk_multiplier:    parseFloat(riskMultiplier),
       },
+    }),
+
+  // NEW
+  getMyCopies: () => req("get_my_copies"),
+
+  stopCopy: (providerId) =>
+    req("stop_copy", {
+      method: "POST",
+      body: { provider_id: providerId },
     }),
 };
 
@@ -381,6 +423,16 @@ export const adminService = {
    *             open_positions, total_deposits, pending_transactions, pending_kyc } }
    */
   getDashboardStats: () => req("admin_dashboard_stats"),
+
+   getDeposits: (status = "", page = 1) =>
+    req("admin_get_deposits", { params: { status, page, per_page: 20 } }),
+
+  approveDeposit: (depositId) =>
+    req("admin_approve_deposit", { method: "POST", body: { deposit_id: depositId } }),
+
+  rejectDeposit: (depositId, adminNote = "") =>
+    req("admin_reject_deposit", { method: "POST", body: { deposit_id: depositId, admin_note: adminNote } }),
+
 
   /**
    * POST ?action=admin_approve_transaction

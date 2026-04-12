@@ -30,6 +30,9 @@ import InternalTransfer from "./pages/dashboard/InternalTransfer";
 import KYCSection from "./pages/dashboard/KYCSection";
 import CopyTradingPage from "./pages/dashboard/CopyTradingPage";
 import TerminalPage from "./pages/TerminalPage";
+import TransactionsPage from "./pages/dashboard/TransactionsPage";
+import VerifyEmailPage from "./pages/VerifyEmailPage";
+
 
 export default function App() {
   const dispatch = useDispatch();
@@ -51,10 +54,13 @@ export default function App() {
           <Route path="/promotions" element={<PromotionsPage />} />
           <Route path="/partners" element={<PartnersPage />} />
           <Route path="/about" element={<AboutPage />} />
+          <Route path="/verify" element={<VerifyEmailPage />} />
+         
           <Route path="/login" element={<RedirectIfAuth><LoginPage /></RedirectIfAuth>} />
           <Route path="/register" element={<RedirectIfAuth><RegisterPage /></RedirectIfAuth>} />
           <Route path="/trading-terminal" element={<RequireAuth><TerminalPage /></RequireAuth>} />
           <Route path="/dashboard" element={<RequireAuth><DashboardLayout /></RequireAuth>}>
+         <Route path="transactions" element={<TransactionsPage />} />
             <Route index element={<DashboardHome />} />
             <Route path="accounts" element={<AccountManagement />} />
             <Route path="funds" element={<DepositWithdraw />} />
@@ -70,6 +76,8 @@ export default function App() {
             <Route path="kyc" element={<AdminKYC />} />
             <Route path="markets" element={<AdminMarkets />} />
             <Route path="settings" element={<AdminSettings />} />
+
+
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

@@ -2,9 +2,10 @@ import { useState } from "react";
 import { Link, NavLink, useNavigate, Outlet } from "react-router-dom";
 import {
   LayoutDashboard, CreditCard, ArrowLeftRight, TrendingUp,
-  User, ShieldCheck, LogOut, Menu, X, ChevronRight, Bell, Wallet, Users
+  User, ShieldCheck, LogOut, Menu, X, ChevronRight, Bell, Wallet, Users,Receipt
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import UnverifiedBanner from "../../components/UnverifiedBanner";
 
 const navItems = [
   { label: "Overview", path: "/dashboard", icon: LayoutDashboard, end: true },
@@ -13,6 +14,7 @@ const navItems = [
   { label: "Internal Transfer", path: "/dashboard/transfer", icon: ArrowLeftRight },
   { label: "Copy Trading", path: "/dashboard/copy", icon: Users },
   { label: "KYC / Profile", path: "/dashboard/kyc", icon: ShieldCheck },
+  { label: "Transactions", path: "/dashboard/transactions", icon: Receipt },
 ];
 
 export default function DashboardLayout() {
@@ -27,12 +29,14 @@ export default function DashboardLayout() {
 
   return (
     <div className="flex h-screen bg-surface overflow-hidden">
+      <UnverifiedBanner /> 
       {/* Sidebar */}
       <aside
         className={`flex flex-col bg-primary transition-all duration-300 flex-shrink-0 ${
           sidebarOpen ? "w-64" : "w-16"
         }`}
       >
+
         {/* Logo */}
         <div className="flex items-center gap-3 px-5 py-5 border-b border-white/10 h-[68px]">
           <div className="w-8 h-8 bg-accent rounded-[8px] flex items-center justify-center flex-shrink-0">

@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Eye, EyeOff, AlertCircle, Check } from "lucide-react";
+import { Eye, EyeOff, AlertCircle, Check, Mail, RefreshCw, Loader2 } from "lucide-react";
 import { Input } from "../components/ui";
-import { authService } from "../services/api";
+import { authService, mailService } from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
 const countries = [
   "South Africa","Nigeria","Kenya","Ghana","Egypt","Ethiopia","Tanzania",
@@ -24,6 +25,26 @@ export default function RegisterPage() {
   const [apiError, setApiError] = useState("");
   const [loading, setLoading]   = useState(false);
   const [done, setDone]         = useState(false);
+
+  // Add these missing state variables (put them with your other useState hooks):
+const [userId, setUserId]                 = useState(null);
+const [otp, setOtp]                       = useState("");
+const [otpError, setOtpError]             = useState("");
+const [otpLoading, setOtpLoading]         = useState(false);
+const [resendCooldown, setResendCooldown] = useState(0);
+const [resending, setResending]           = useState(false);
+
+// Add this function (put it alongside handleNext and handleSubmit):
+const startResendCooldown = () => {
+  setResendCooldown(60);
+  const interval = setInterval(() => {
+    setResendCooldown((c) => {
+      if (c <= 1) { clearInterval(interval); return 0; }
+      return c - 1;
+    });
+  }, 1000);
+};
+
 
   const update = (field, value) => {
     setForm((f) => ({ ...f, [field]: value }));
@@ -55,23 +76,32 @@ export default function RegisterPage() {
 
   const handleNext = () => { if (validateStep1()) setStep(2); };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validateStep2()) return;
-    setApiError("");
-    setLoading(true);
-    try {
-      // authService.register maps form → PHP snake_case payload
-      await authService.register(form);
-      setDone(true);
-      navigate("/dashboard");
-    } catch (err) {
-      setApiError(err.message || "Registration failed. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  if (!validateStep2()) return;
+  setApiError("");
+  setLoading(true);
+  try {
+    const regRes = await authService.register(form);
 
+    // Fire welcome email — non-blocking
+    mailService.registerConfirm({
+      firstName: form.firstName,
+      lastName:  form.lastName,
+      email:     form.email,
+       verifyToken: regRes.data.verify_token, 
+    }).catch((err) => console.error("Welcome email failed:", err));
+
+    // Move to OTP step
+    setUserId(regRes.data.user_id);
+    setStep(3);
+    startResendCooldown();
+  } catch (err) {
+    setApiError(err.message || "Registration failed. Please try again.");
+  } finally {
+    setLoading(false);
+  }
+};
   // ── Success screen ───────────────────────────────────────────────────────
   if (done) {
     return (

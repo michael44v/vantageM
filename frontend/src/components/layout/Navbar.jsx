@@ -36,13 +36,11 @@ export default function Navbar() {
         }`}
         style={{ height: 72 }}
       >
-        <div className="max-w-[1200px] mx-auto px-10 h-full flex items-center justify-between gap-8">
+        <div className="max-w-[1200px] mx-auto px-10 h-full flex items-center justify-between gap-8" style={{backgroundColor:"white"}}>
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2.5 flex-shrink-0">
             <div className="w-9 h-9 bg-accent rounded-[9px] flex items-center justify-center">
-              <svg viewBox="0 0 20 20" className="w-5 h-5 fill-white">
-                <path d="M10 2L3 7v6l7 5 7-5V7L10 2zm0 2.5l5 3.5v4L10 15 5 12V8l5-3.5z" />
-              </svg>
+             <img src='https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQXEXUBiCFf2GdsMcVX_Mk0PC_VOunqPDKjahyDEIp2_-QI7n0StED0DglG9A&s' style={{width:"60px",height:"60px"}}/>
             </div>
             <span className="font-display font-extrabold text-xl text-primary">Vantage Markets</span>
           </Link>
