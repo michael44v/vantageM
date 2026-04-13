@@ -183,7 +183,7 @@ const fetchData = useCallback(async (silent = false) => {
             </h1>
             <p className="text-white/50 mb-6 relative z-10 text-sm leading-relaxed max-w-md">
               Access global markets and manage your trading portfolio with
-              Vantage Markets.
+              vāntãgeCFD.
             </p>
             <div className="flex gap-3 relative z-10 flex-wrap">
               <Link

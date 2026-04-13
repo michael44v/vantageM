@@ -16,10 +16,10 @@ const CRYPTO_WALLETS = [
 ];
 
 const BANK_DETAILS = [
-  { label: "Bank Name",      value: "Vantage Global Prime" },
+  { label: "Bank Name",      value: "vāntãgeCFD Global Prime" },
   { label: "Account Number", value: "881 223 990 001" },
   { label: "SWIFT / BIC",    value: "VGPGBK11XX" },
-  { label: "Account Name",   value: "Vantage Markets Ltd" },
+  { label: "Account Name",   value: "vāntãgeCFD Ltd" },
   { label: "Reference",      value: "Your registered email" },
 ];
 

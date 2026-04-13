@@ -382,14 +382,14 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`id`, `name`, `email`, `password_hash`, `phone`, `country`, `wallet_balance`, `role`, `status`, `email_verified_at`, `last_login_at`, `created_at`, `updated_at`) VALUES
-(1, 'Admin User', 'admin@vantagemarkets.com', '$2y$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', NULL, NULL, 0.00, 'admin', 'active', '2026-04-05 09:30:09', NULL, '2026-04-05 09:30:09', '2026-04-05 09:30:09'),
-(2, 'Demo Trader', 'trader@vantagemarkets.com', '$2y$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', NULL, NULL, -31367.00, 'trader', 'active', '2026-04-05 09:30:09', NULL, '2026-04-05 09:30:09', '2026-04-09 21:56:11'),
+(1, 'Admin User', 'admin@vantageCFD.com', '$2y$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', NULL, NULL, 0.00, 'admin', 'active', '2026-04-05 09:30:09', NULL, '2026-04-05 09:30:09', '2026-04-05 09:30:09'),
+(2, 'Demo Trader', 'trader@vantageCFD.com', '$2y$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', NULL, NULL, -31367.00, 'trader', 'active', '2026-04-05 09:30:09', NULL, '2026-04-05 09:30:09', '2026-04-09 21:56:11'),
 (4, 'Michael Nwankwo', 'michaelnwankwoscloud@gmail.cm', '$2y$10$L1jOGjepSzO.7Gyw8BZnYONwAPBx5K7ewgqxVwxTsI9D8kOgva5jK', NULL, 'Nigeria', 338.92, 'trader', 'pending', NULL, NULL, '2026-04-06 08:07:34', '2026-04-12 05:48:29'),
-(5, 'James Okafor', 'james@vantagemarkets.com', '$2y$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', NULL, NULL, 5000.00, 'trader', 'active', '2026-04-11 06:17:40', NULL, '2026-04-11 06:17:40', '2026-04-11 06:17:40'),
-(6, 'Sofia Reyes', 'sofia@vantagemarkets.com', '$2y$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', NULL, NULL, 8000.00, 'trader', 'active', '2026-04-11 06:17:40', NULL, '2026-04-11 06:17:40', '2026-04-11 06:17:40'),
-(7, 'Marcus Chen', 'marcus@vantagemarkets.com', '$2y$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', NULL, NULL, 12000.00, 'trader', 'active', '2026-04-11 06:17:40', NULL, '2026-04-11 06:17:40', '2026-04-11 06:17:40'),
-(8, 'Amara Diallo', 'amara@vantagemarkets.com', '$2y$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', NULL, NULL, 3500.00, 'trader', 'active', '2026-04-11 06:17:40', NULL, '2026-04-11 06:17:40', '2026-04-11 06:17:40'),
-(9, 'Viktor Petrov', 'viktor@vantagemarkets.com', '$2y$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', NULL, NULL, 20000.00, 'trader', 'active', '2026-04-11 06:17:40', NULL, '2026-04-11 06:17:40', '2026-04-11 06:17:40'),
+(5, 'James Okafor', 'james@vantageCFD.com', '$2y$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', NULL, NULL, 5000.00, 'trader', 'active', '2026-04-11 06:17:40', NULL, '2026-04-11 06:17:40', '2026-04-11 06:17:40'),
+(6, 'Sofia Reyes', 'sofia@vantageCFD.com', '$2y$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', NULL, NULL, 8000.00, 'trader', 'active', '2026-04-11 06:17:40', NULL, '2026-04-11 06:17:40', '2026-04-11 06:17:40'),
+(7, 'Marcus Chen', 'marcus@vantageCFD.com', '$2y$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', NULL, NULL, 12000.00, 'trader', 'active', '2026-04-11 06:17:40', NULL, '2026-04-11 06:17:40', '2026-04-11 06:17:40'),
+(8, 'Amara Diallo', 'amara@vantageCFD.com', '$2y$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', NULL, NULL, 3500.00, 'trader', 'active', '2026-04-11 06:17:40', NULL, '2026-04-11 06:17:40', '2026-04-11 06:17:40'),
+(9, 'Viktor Petrov', 'viktor@vantageCFD.com', '$2y$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', NULL, NULL, 20000.00, 'trader', 'active', '2026-04-11 06:17:40', NULL, '2026-04-11 06:17:40', '2026-04-11 06:17:40'),
 (10, 'Test Test', 'test@gmail.com', '$2y$10$goSbbZR0jW/6IqxEpkdTgusQnQgg3SDzUYPsBGk32xM1KooJF0Uhi', NULL, 'Ethiopia', 0.00, 'trader', 'pending', NULL, NULL, '2026-04-11 07:51:59', '2026-04-11 07:51:59'),
 (11, 'Cy Watson', 'cytradingcommunity@gmail.com', '$2y$10$GaPsU0j2.1W1mPHs0zQUEuCyMGTOKkjnJ.zn6HP6u/2wkUt9NghwC', NULL, 'United Kingdom', 0.00, 'trader', 'pending', NULL, NULL, '2026-04-11 07:57:02', '2026-04-11 07:57:02'),
 (26, 'jsf dfdfd', 'hectorchri60@gmail.com', '$2y$10$NegeNEl4sXy8ry2A/sAtR.TRV3lhwtYSRy/30N7iyUtTk/uAtGo4q', '24525252', 'Ghana', 0.00, 'trader', 'pending', NULL, NULL, '2026-04-12 05:43:03', '2026-04-12 05:43:03'),
@@ -651,3 +651,22 @@ COMMIT;
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+
+-- --------------------------------------------------------
+-- Table structure for table `settings`
+--
+CREATE TABLE `settings` (
+  `key` varchar(100) NOT NULL,
+  `value` text,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO `settings` (`key`, `value`) VALUES
+('site_name', 'vāntãgeCFD'),
+('support_email', 'support@vantageCFD.com'),
+('min_deposit', '50'),
+('default_currency', 'USD'),
+('copy_trading_enabled', '1'),
+('registration_open', '1');
+('site_logo', 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQXEXUBiCFf2GdsMcVX_Mk0PC_VOunqPDKjahyDEIp2_-QI7n0StED0DglG9A&s'),

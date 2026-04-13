@@ -1,88 +1,65 @@
-# Vantage Markets - Modern Trading Platform
+# vāntãgeCFD - Institutional Grade Trading Experience
 
-A simplified, robust full-stack trading application built with React, Redux Toolkit, and a single-file PHP backend.
+vāntãgeCFD is a comprehensive, full-stack trading platform designed for both retail traders and professional signal providers. Built with a React/Redux frontend and a high-performance procedural PHP backend.
 
----
+## 🚀 Advanced Platform Features
 
-## 🚀 Key Features
+### 💻 Trading Terminal
+- **Live Markets:** Real-time simulated price feeds for Forex, Metals, and Crypto.
+- **Precision Execution:** Instant order execution with dynamic margin calculation and leverage management.
+- **Technical Analysis:** Integrated TradingView charting for professional-grade market analysis.
 
-- **Rebranded Experience:** Global Vantage Markets identity with Gold/Black/White 'Apple-style' UI.
-- **Simplified Backend:** Single-file procedural API (`backend/api.php`) using MySQLi for high performance and low complexity.
-- **Redux State Management:** Centralized frontend state handling using Redux Toolkit for seamless data synchronization.
-- **Admin Live Monitoring:** Dedicated dashboard for administrators to view real-time open positions and live PnL calculations across all users.
-- **Advanced Execution:** Integrated Trade Modal with lot sizing, dynamic leverage adjustment, and margin requirement verification.
-- **Interactive Terminal:** Dark-mode web terminal with account selection, market watch, and position management.
-- **Automatic Refresh:** Data polling and manual refresh buttons integrated into key trading views.
+### 👥 Copy Trading Ecosystem
+- **Signal Marketplace:** Discovery portal for elite traders with verified ROI and performance metrics.
+- **Mirror Trading:** Fully automated position synchronization with customizable risk multipliers.
+- **Provider Tools:** Advanced dashboard for signal providers to manage their strategy and subscribers.
 
----
+### 🛡️ Secure Financial Portal
+- **KYC Compliance:** Multi-stage document verification flow (Identity & Address).
+- **Multi-Asset Wallet:** Support for Bank Wire and Crypto (BTC/ETH/USDT) deposits.
+- **Internal Transfers:** Instant movements between master wallet and MT4/MT5 trading accounts.
+
+### 📧 Enterprise Communication
+- **Mandatory Verification:** Secure email verification flow required for account activation.
+- **Smart Notifications:** Real-time trade alerts and account status updates via vāntãgeCFD Mail Gateway.
+- **Password Recovery:** Robust token-based forgotten password recovery system.
 
 ## 🛠️ Technology Stack
 
-- **Frontend:** React 18, Redux Toolkit, Tailwind CSS, Lucide Icons, Recharts.
-- **Backend:** PHP 8.1+ (Procedural), MySQLi.
-- **Database:** MySQL 8.0.
+- **Frontend:** React 18 (Vite), Redux Toolkit, Tailwind CSS, Lucide Icons.
+- **Backend:** PHP 8.1+ (Procedural Gateway API), MySQL 8.0.
+- **Mailing:** PHPMailer via vāntãgeCFD Secure SMTP.
+- **Infrastructure:** Docker Compose (Apache/MySQL/Node).
 
----
-
-## 📂 Project Structure
+## 📂 Project Architecture
 
 ```text
-vantage-app/
+/
 ├── backend/
-│   └── api.php          # Unified API entry point (Routing + Logic)
+│   ├── index.php        # Unified API Gateway (Routing & Logic)
+│   ├── mails.php        # Dedicated Mail Service (PHPMailer)
+│   └── database.sql     # Complete Schema & Initial Configuration
 ├── frontend/
 │   ├── src/
-│   │   ├── store/       # Redux Toolkit setup
-│   │   ├── services/    # API calling layer
-│   │   ├── pages/       # Portal, Terminal, and Admin views
-│   │   └── components/  # Shared UI components
+│   │   ├── services/    # Centralized API Interface
+│   │   ├── store/       # Redux Global State Management
+│   │   ├── pages/       # Portal, Terminal, and Admin Interface
+│   │   └── components/  # Reusable UI Design System
 │   └── tailwind.config.js
-└── README.md
+└── docker-compose.yml
 ```
 
----
+## ⚡ Setup & Installation
 
-## 📡 API Endpoints
+1. **Environment Config:**
+   - Rename `backend/.env.example` to `backend/.env` and configure DB credentials.
+   - Configure SMTP credentials in `backend/mails.php`.
 
-All requests go to `backend/api.php?action=<action_name>`.
+2. **Docker Quickstart:**
+   - Run `docker-compose up -d` to spin up the entire stack.
 
-| Action | Method | Description |
-| :--- | :--- | :--- |
-| `login` | POST | Authenticate user |
-| `register` | POST | Create new account |
-| `get_accounts` | GET | Fetch user's trading accounts |
-| `get_positions` | GET | Fetch open trades for an account |
-| `admin_live_trades` | GET | (Admin) View all global open trades |
-| `execute_trade` | POST | Place a new Buy/Sell order |
-| `update_leverage` | POST | Change account leverage settings |
-| `internal_transfer` | POST | Move funds between wallet and account |
+3. **Manual Frontend Setup:**
+   - `cd frontend && npm install && npm run dev`.
 
 ---
-
-## 🔑 Database Configuration
-
-The backend is pre-configured to connect to:
-- **Host:** `localhost`
-- **Database:** `jvrzjzbc_vantage_db`
-- **User:** `jvrzjzbc_root`
-
----
-
-## 💻 Setup Instructions
-
-1. **Backend:**
-   - Place `backend/api.php` on your PHP server.
-   - Import `database.sql` into your MySQL instance.
-
-2. **Frontend:**
-   - `cd frontend`
-   - `npm install`
-   - `npm run dev`
-
----
-
-## 🔒 Security & Performance
-
-- **Procedural Routing:** Fast, low-overhead execution without heavy MVC overhead.
-- **Escaped Inputs:** Utilizes `real_escape_string` for database protection.
-- **JWT Simulation:** Simple token-based logic for demo/prototype flexibility.
+© 2026 vāntãgeCFD. All rights reserved.

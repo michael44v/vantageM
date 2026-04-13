@@ -171,7 +171,7 @@ export const platforms = [
   },
   {
     id: "app",
-    name: "Vantage App",
+    name: "vāntãgeCFD App",
     tag: "iOS / Android",
     badge: null,
     description:

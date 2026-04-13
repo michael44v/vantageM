@@ -19,7 +19,7 @@ const footerCols = [
       { label: "MetaTrader 5", path: "/platforms" },
       { label: "MetaTrader 4", path: "/platforms" },
       { label: "TradingView", path: "/platforms" },
-      { label: "Vantage App", path: "/platforms" },
+      { label: "vāntãgeCFD App", path: "/platforms" },
       { label: "Copy Trading", path: "/platforms#copy" },
       { label: "Demo Account", path: "/register" },
     ],
@@ -50,15 +50,15 @@ export default function Footer() {
                   <path d="M10 2L3 7v6l7 5 7-5V7L10 2zm0 2.5l5 3.5v4L10 15 5 12V8l5-3.5z" />
                 </svg>
               </div>
-              <span className="font-display font-extrabold text-xl text-white">Vantage Markets</span>
+              <span className="font-display font-extrabold text-xl text-white">vāntãgeCFD</span>
             </Link>
             <p className="text-sm text-white/50 leading-relaxed max-w-xs mb-6">
               An award-winning CFD broker trusted by 5,000,000+ traders across 100+ countries. Trade smarter with institutional-grade technology.
             </p>
             <div className="flex flex-col gap-3">
-              <a href="mailto:support@vantagemarkets.com" className="flex items-center gap-2 text-sm text-white/50 hover:text-white/80 transition-colors">
+              <a href="mailto:support@vantageCFD.com" className="flex items-center gap-2 text-sm text-white/50 hover:text-white/80 transition-colors">
                 <Mail className="w-4 h-4 flex-shrink-0" />
-                support@vantagemarkets.com
+                support@vantageCFD.com
               </a>
               <div className="flex items-start gap-2 text-sm text-white/50">
                 <MapPin className="w-4 h-4 flex-shrink-0 mt-0.5" />
@@ -97,10 +97,10 @@ export default function Footer() {
         {/* Legal */}
         <div className="py-6">
           <p className="text-xs text-white/30 leading-relaxed mb-3">
-            VIG Group, operating under the brand Vantage Markets, is an investment dealer authorized and regulated by the Mauritius Financial Services Commission (FSC). Business operations are protected by insurance coverage provided by Willis Towers Watson (WTW). Claims eligibility of up to USD 1,000,000 per claimant. Vantage Markets is a member of The Financial Commission. Vantage Markets does not offer services to residents of India, Canada, China, Singapore, the United States, or any FATF blacklisted jurisdiction.
+            VIG Group, operating under the brand vāntãgeCFD, is an investment dealer authorized and regulated by the Mauritius Financial Services Commission (FSC). Business operations are protected by insurance coverage provided by Willis Towers Watson (WTW). Claims eligibility of up to USD 1,000,000 per claimant. vāntãgeCFD is a member of The Financial Commission. vāntãgeCFD does not offer services to residents of India, Canada, China, Singapore, the United States, or any FATF blacklisted jurisdiction.
           </p>
           <p className="text-xs text-white/30 text-center pt-4 border-t border-white/10">
-            &copy; {new Date().getFullYear()} Vantage Markets. All rights reserved.
+            &copy; {new Date().getFullYear()} vāntãgeCFD. All rights reserved.
           </p>
         </div>
       </div>

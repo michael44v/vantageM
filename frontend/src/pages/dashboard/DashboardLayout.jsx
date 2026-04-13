@@ -46,7 +46,7 @@ export default function DashboardLayout() {
           </div>
           {sidebarOpen && (
             <span className="font-display font-extrabold text-base text-white truncate">
-              Vantage Portal
+              vāntãgeCFD Portal
             </span>
           )}
         </div>
@@ -112,7 +112,7 @@ export default function DashboardLayout() {
               {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
             <div className="hidden sm:flex items-center gap-1.5 text-xs text-[#8897A9]">
-              <Link to="/" className="hover:text-accent transition-colors">Vantage Markets</Link>
+              <Link to="/" className="hover:text-accent transition-colors">vāntãgeCFD</Link>
               <ChevronRight className="w-3 h-3" />
               <span className="text-primary font-medium">Client Portal</span>
             </div>

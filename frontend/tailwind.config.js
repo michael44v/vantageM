@@ -9,12 +9,12 @@ export default {
       },
       colors: {
         primary: {
-          DEFAULT: "#111111", // Vantage Black
+          DEFAULT: "#111111", // vāntãgeCFD Black
           light: "#222222",
           dark: "#000000",
         },
         accent: {
-          DEFAULT: "#FFC800", // Vantage Gold/Yellow
+          DEFAULT: "#FFC800", // vāntãgeCFD Gold/Yellow
           light: "#FFD733",
           dark: "#CCA000",
         },

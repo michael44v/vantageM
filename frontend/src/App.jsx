@@ -7,12 +7,15 @@ import { RequireAdmin, RedirectIfAuth, RequireAuth } from "./components/Protecte
 
 import HomePage from "./pages/HomePage";
 import TradingPage from "./pages/TradingPage";
+import UnverifiedBanner from "./components/UnverifiedBanner";
 import PlatformsPage from "./pages/PlatformsPage";
 import PromotionsPage from "./pages/PromotionsPage";
 import PartnersPage from "./pages/PartnersPage";
 import AboutPage from "./pages/AboutPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -20,6 +23,8 @@ import AdminLiveTrades from "./pages/admin/AdminLiveTrades";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminTransactions from "./pages/admin/AdminTransactions";
 import AdminKYC from "./pages/admin/AdminKYC";
+import AdminSignals from "./pages/admin/AdminSignals";
+import AdminMail from "./pages/admin/AdminMail";
 import { AdminMarkets, AdminSettings } from "./pages/admin/AdminMarketsAndSettings";
 
 import DashboardLayout from "./pages/dashboard/DashboardLayout";
@@ -46,6 +51,7 @@ export default function App() {
 
   return (
     <AuthProvider>
+<UnverifiedBanner />
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<HomePage />} />
@@ -58,6 +64,8 @@ export default function App() {
          
           <Route path="/login" element={<RedirectIfAuth><LoginPage /></RedirectIfAuth>} />
           <Route path="/register" element={<RedirectIfAuth><RegisterPage /></RedirectIfAuth>} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/trading-terminal" element={<RequireAuth><TerminalPage /></RequireAuth>} />
           <Route path="/dashboard" element={<RequireAuth><DashboardLayout /></RequireAuth>}>
          <Route path="transactions" element={<TransactionsPage />} />
@@ -74,6 +82,8 @@ export default function App() {
             <Route path="users" element={<AdminUsers />} />
             <Route path="transactions" element={<AdminTransactions />} />
             <Route path="kyc" element={<AdminKYC />} />
+            <Route path="mail" element={<AdminMail />} />
+            <Route path="copy-trading" element={<AdminSignals />} />
             <Route path="markets" element={<AdminMarkets />} />
             <Route path="settings" element={<AdminSettings />} />
 
