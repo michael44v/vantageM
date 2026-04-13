@@ -6,6 +6,16 @@
 
 declare(strict_types=1);
 
+// --- 0. Error Handling ---
+error_reporting(E_ALL);
+ini_set('display_errors', '0');
+
+set_exception_handler(function($e) {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Server Error: ' . $e->getMessage()]);
+    exit;
+});
+
 // --- 1. CORS Headers ---
 $allowedOrigins = ['http://localhost:3000', 'http://localhost:5173'];
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
@@ -1349,25 +1359,30 @@ function get_auth_user_id(): int {
 // Payload: { provider_id, trading_account_id, risk_multiplier }
 function handle_copy_signal($db, $input) {
     $copier_id          = get_auth_user_id();
-    $provider_id        = (int)($input['provider_id']        ?? 0);
+    $signal_id          = (int)($input['provider_id']        ?? 0); // Frontend passes signal ID
     $trading_account_id = (int)($input['trading_account_id'] ?? 0);
     $risk_multiplier    = (float)($input['risk_multiplier']  ?? 1.0);
  
-    if (!$copier_id || !$provider_id || !$trading_account_id) {
+    if (!$copier_id || !$signal_id || !$trading_account_id) {
         send_json(['success' => false, 'error' => 'Missing required fields.'], 400);
     }
  
-    // Prevent self-copy
-    $prov_res = $db->query("SELECT user_id FROM signals WHERE id = $provider_id LIMIT 1");
+    // Get provider's user_id from signals table
+    $prov_res = $db->query("SELECT user_id FROM signals WHERE id = $signal_id LIMIT 1");
     $prov     = $prov_res->fetch_assoc();
-    if ($prov && (int)$prov['user_id'] === $copier_id) {
+    if (!$prov) {
+        send_json(['success' => false, 'error' => 'Signal provider not found.'], 404);
+    }
+    $provider_user_id = (int)$prov['user_id'];
+
+    if ($provider_user_id === $copier_id) {
         send_json(['success' => false, 'error' => 'You cannot copy your own signal.'], 400);
     }
  
-    // Upsert: if already copying, update; otherwise insert
+    // Upsert: if already copying this provider, update; otherwise insert
     $check = $db->query(
         "SELECT id FROM copy_relationships
-         WHERE copier_id = $copier_id AND provider_id = $provider_id
+         WHERE copier_id = $copier_id AND provider_id = $provider_user_id
          AND trading_account_id = $trading_account_id LIMIT 1"
     );
  
@@ -1383,15 +1398,15 @@ function handle_copy_signal($db, $input) {
  
     $sql = "INSERT INTO copy_relationships
                 (copier_id, provider_id, trading_account_id, risk_multiplier, status)
-            VALUES ($copier_id, $provider_id, $trading_account_id, $risk_multiplier, 'active')";
+            VALUES ($copier_id, $provider_user_id, $trading_account_id, $risk_multiplier, 'active')";
  
     if ($db->query($sql)) {
-        // Increment subscriber count on signals table
-        $db->query("UPDATE signals SET subscribers = subscribers + 1 WHERE id = $provider_id");
+        // Increment subscriber count on signals table using signal_id
+        $db->query("UPDATE signals SET subscribers = subscribers + 1 WHERE id = $signal_id");
         send_json(['success' => true, 'message' => 'You are now copying this provider.',
                    'data' => ['copy_id' => $db->insert_id]]);
     }
-    send_json(['success' => false, 'error' => $db->error], 500);
+    send_json(['success' => false, 'error' => 'Database Error: ' . $db->error], 500);
 }
  
 // ─── GET ?action=get_kyc ──────────────────────────────────────────────────────

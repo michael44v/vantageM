@@ -31,7 +31,7 @@ export const clearToken = ()      => localStorage.removeItem("vm_token");
 
 
 // ── Mail base URL (separate PHP file) ─────────────────────────────────────────
-const MAIL_URL = "https://vantagemarketts.com/backend/mails.php";
+const MAIL_URL = "https://vantagemarketts.com/backend/mail.php";
 
 // ── Mail request helper (separate from main req() since different base URL) ───
 async function mailReq(action, body = {}) {
