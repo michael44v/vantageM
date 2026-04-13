@@ -1,8 +1,8 @@
-# Vantage Markets — API Documentation (MySQLi Backend)
+# vāntãgeCFD — API Documentation (MySQLi Backend)
 
-This document specifies the REST API endpoints for the Vantage Markets platform. The backend is implemented using PHP with the **MySQLi** extension.
+This document specifies the REST API endpoints for the vāntãgeCFD platform. The backend is implemented using PHP with the **MySQLi** extension.
 
-**Base URL:** `https://vantagemarkets.com/api/`
+**Base URL:** `https://vantageCFD.com/api/`
 **Content-Type:** `application/json`
 **Authentication:** Bearer JWT (required for protected routes)
 
@@ -47,7 +47,7 @@ Authenticate and receive a JWT.
 **Payload:**
 ```json
 {
-  "email": "trader@vantagemarkets.com",
+  "email": "trader@vantageCFD.com",
   "password": "trader123"
 }
 ```

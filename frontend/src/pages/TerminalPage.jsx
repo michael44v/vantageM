@@ -541,7 +541,7 @@ export default function TerminalPage() {
             <div className="w-6 h-6 bg-accent rounded flex items-center justify-center">
               <TrendingUp className="w-3.5 h-3.5 text-white" />
             </div>
-            <span className="font-bold text-sm hidden sm:block">Vantage</span>
+            <span className="font-bold text-sm hidden sm:block">vāntãgeCFD</span>
           </Link>
           <div className="h-5 w-px bg-white/10 hidden sm:block" />
           <div className="flex items-center gap-3 text-[11px] min-w-0">

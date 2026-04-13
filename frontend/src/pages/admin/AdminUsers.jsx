@@ -1,6 +1,6 @@
-import { useState } from "react";
-import { Search, Filter, MoreHorizontal, Eye, Ban, Trash2 } from "lucide-react";
-import { adminUsers } from "../../data/mockData";
+import { useState, useEffect } from "react";
+import { Search, Filter, MoreHorizontal, Eye, Ban, Trash2, Edit2, Loader2, Save, X } from "lucide-react";
+import { adminService } from "../../services/api";
 import { Badge, Input } from "../../components/ui";
 
 function statusVariant(s) {
@@ -11,7 +11,45 @@ export default function AdminUsers() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [selected, setSelected] = useState(null);
-  const [users, setUsers] = useState(adminUsers);
+  const [editing, setEditing] = useState(null);
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    setLoading(true);
+    try {
+      const res = await adminService.getUsers(1, 100);
+      setUsers(res.data || []);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdate = async (userData) => {
+    try {
+      await adminService.updateUser(userData);
+      setEditing(null);
+      fetchUsers();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure?")) return;
+    try {
+      await adminService.deleteUser(id);
+      fetchUsers();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
 
   const filtered = users.filter((u) => {
     const matchSearch =
@@ -22,14 +60,9 @@ export default function AdminUsers() {
     return matchSearch && matchStatus;
   });
 
-  const toggleStatus = (id) => {
-    setUsers((prev) =>
-      prev.map((u) =>
-        u.id === id
-          ? { ...u, status: u.status === "Active" ? "Suspended" : "Active" }
-          : u
-      )
-    );
+  const toggleStatus = async (user) => {
+    const newStatus = user.status === "active" ? "suspended" : "active";
+    await handleUpdate({ ...user, status: newStatus });
   };
 
   return (
@@ -116,13 +149,21 @@ export default function AdminUsers() {
                         <Eye className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => toggleStatus(u.id)}
+                        onClick={() => setEditing(u)}
+                        className="p-1.5 rounded-[8px] text-[#4A5568] hover:bg-blue-50 hover:text-blue-600 transition-all"
+                        title="Edit"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => toggleStatus(u)}
                         className="p-1.5 rounded-[8px] text-[#4A5568] hover:bg-amber-50 hover:text-amber-600 transition-all"
-                        title={u.status === "Active" ? "Suspend" : "Activate"}
+                        title={u.status === "active" ? "Suspend" : "Activate"}
                       >
                         <Ban className="w-4 h-4" />
                       </button>
                       <button
+                        onClick={() => handleDelete(u.id)}
                         className="p-1.5 rounded-[8px] text-[#4A5568] hover:bg-red-50 hover:text-red-500 transition-all"
                         title="Delete"
                       >
@@ -151,6 +192,61 @@ export default function AdminUsers() {
           </div>
         </div>
       </div>
+
+      {/* Edit modal */}
+      {editing && (
+        <div className="fixed inset-0 bg-primary/60 backdrop-blur-sm z-50 flex items-center justify-center p-6" onClick={() => setEditing(null)}>
+          <div className="bg-white rounded-xl p-8 max-w-md w-full shadow-xl animate-fade-in-up" onClick={(e) => e.stopPropagation()}>
+            <h2 className="font-display font-extrabold text-xl text-primary mb-6">Edit User</h2>
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              const fd = new FormData(e.target);
+              handleUpdate({
+                ...editing,
+                name: fd.get("name"),
+                email: fd.get("email"),
+                role: fd.get("role"),
+                status: fd.get("status"),
+                wallet_balance: fd.get("balance")
+              });
+            }} className="space-y-4">
+              <div>
+                <label className="text-xs font-bold uppercase text-[#8897A9]">Name</label>
+                <input name="name" defaultValue={editing.name} className="input-field mt-1" />
+              </div>
+              <div>
+                <label className="text-xs font-bold uppercase text-[#8897A9]">Email</label>
+                <input name="email" defaultValue={editing.email} className="input-field mt-1" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-bold uppercase text-[#8897A9]">Role</label>
+                  <select name="role" defaultValue={editing.role} className="input-field mt-1">
+                    <option value="trader">Trader</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-bold uppercase text-[#8897A9]">Status</label>
+                  <select name="status" defaultValue={editing.status} className="input-field mt-1">
+                    <option value="active">Active</option>
+                    <option value="pending">Pending</option>
+                    <option value="suspended">Suspended</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-bold uppercase text-[#8897A9]">Wallet Balance ($)</label>
+                <input name="balance" type="number" step="0.01" defaultValue={editing.wallet_balance} className="input-field mt-1" />
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button type="button" onClick={() => setEditing(null)} className="flex-1 py-2.5 rounded-[10px] border border-surface-border text-[#4A5568] font-semibold">Cancel</button>
+                <button type="submit" className="flex-1 py-2.5 rounded-[10px] bg-accent text-white font-semibold">Save Changes</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* User detail modal */}
       {selected && (

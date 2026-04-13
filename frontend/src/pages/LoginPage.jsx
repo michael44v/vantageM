@@ -73,7 +73,7 @@ export default function LoginPage() {
             </svg>
           </div>
           <span className="font-display font-extrabold text-xl text-white tracking-tight">
-            Vantage Markets
+            vāntãgeCFD
           </span>
         </Link>
 
@@ -112,7 +112,7 @@ export default function LoginPage() {
         </div>
 
         <p className="text-xs text-white/20 relative z-10">
-          © {new Date().getFullYear()} Vantage Markets. All rights reserved.
+          © {new Date().getFullYear()} vāntãgeCFD. All rights reserved.
         </p>
       </div>
 
@@ -127,7 +127,7 @@ export default function LoginPage() {
                 <path d="M10 2L3 7v6l7 5 7-5V7L10 2zm0 2.5l5 3.5v4L10 15 5 12V8l5-3.5z" />
               </svg>
             </div>
-            <span className="font-display font-extrabold text-lg text-primary">Vantage Markets</span>
+            <span className="font-display font-extrabold text-lg text-primary">vāntãgeCFD</span>
           </Link>
 
           <div className="bg-white border border-surface-border rounded-2xl p-10 shadow-card">
@@ -196,9 +196,9 @@ export default function LoginPage() {
                   <input type="checkbox" className="accent-accent w-3.5 h-3.5" />
                   <span className="text-sm text-[#4A5568]">Remember me</span>
                 </label>
-                <a href="#" className="text-sm text-accent font-semibold hover:underline">
+                <Link to="/forgot-password" title="Go to forgot password page" className="text-sm text-accent font-semibold hover:underline">
                   Forgot password?
-                </a>
+                </Link>
               </div>
 
               {/* Submit */}

@@ -23,13 +23,13 @@ export function AuthProvider({ children }) {
       }
       
 
-      if (credentials.email === "admin@vantagemarkets.com" && credentials.password === "admin123") {
+      if (credentials.email === "admin@vantageCFD.com" && credentials.password === "admin123") {
         const adminUser = { id: 1, name: "Admin User", email: credentials.email, role: "admin" };
         setUser(adminUser);
         localStorage.setItem("vantagemarkets_user", JSON.stringify(adminUser));
         return { success: true, role: "admin" };
       }
-      if (credentials.email === "trader@vantagemarkets.com" && credentials.password === "trader123") {
+      if (credentials.email === "trader@vantageCFD.com" && credentials.password === "trader123") {
         const traderUser = { id: 2, name: "Demo Trader", email: credentials.email, role: "trader" };
         setUser(traderUser);
         localStorage.setItem("vm_token", JSON.stringify(traderUser));

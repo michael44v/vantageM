@@ -81,7 +81,7 @@ export default function VerifyEmailPage() {
               <path d="M10 2L3 7v6l7 5 7-5V7L10 2zm0 2.5l5 3.5v4L10 15 5 12V8l5-3.5z" />
             </svg>
           </div>
-          <span className="font-display font-extrabold text-xl text-white">Vantage Markets</span>
+          <span className="font-display font-extrabold text-xl text-white">vāntãgeCFD</span>
         </div>
 
         <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
@@ -110,7 +110,7 @@ export default function VerifyEmailPage() {
                   Email Verified! 🎉
                 </h1>
                 <p className="text-sm text-[#4B5563] leading-relaxed mb-8 max-w-xs">
-                  Your Vantage Markets account is now fully active. You're ready to trade global markets.
+                  Your vāntãgeCFD account is now fully active. You're ready to trade global markets.
                 </p>
 
                 {/* Features unlocked */}
@@ -216,7 +216,7 @@ export default function VerifyEmailPage() {
         </div>
 
         <p className="text-center text-xs text-white/30 mt-6">
-          © 2026 Vantage Markets · Regulated by ASIC · FCA · CIMA
+          © 2026 vāntãgeCFD · Regulated by ASIC · FCA · CIMA
         </p>
       </div>
     </div>

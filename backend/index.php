@@ -1,6 +1,6 @@
 <?php
 /**
- * Vantage Markets - Simple API Gateway
+ * vāntãgeCFD - Simple API Gateway
  * Unified single-file backend (Procedural approach)
  */
 
@@ -150,6 +150,38 @@ case 'admin_approve_deposit':
 case 'admin_reject_deposit':
     handle_admin_reject_deposit($db, $input);
     break;
+
+case 'admin_update_user':
+    handle_admin_update_user($db, $input);
+    break;
+case 'admin_delete_user':
+    handle_admin_delete_user($db, $input);
+    break;
+case 'admin_get_signals':
+    handle_admin_get_signals($db);
+    break;
+case 'admin_upsert_signal':
+    handle_admin_upsert_signal($db, $input);
+    break;
+case 'admin_delete_signal':
+    handle_admin_delete_signal($db, $input);
+    break;
+case 'admin_get_settings':
+    handle_admin_get_settings($db);
+    break;
+case 'admin_update_settings':
+    handle_admin_update_settings($db, $input);
+    break;
+case 'get_site_settings':
+    handle_get_site_settings($db);
+    break;
+
+    case 'forgot_password':
+    handle_forgot_password($db, $input);
+    break;
+    case 'reset_password':
+    handle_reset_password($db, $input);
+    break;
     
     default:
         send_json(['success' => false, 'error' => 'Action not found: ' . $action], 404);
@@ -191,7 +223,13 @@ function handle_verify_email_token($db, $input) {
             'already' => true,
             'message' => 'Your email is already verified. You can log in.',
             'token'   => $auth_token,
-            'user'    => ['id' => $row['user_id'], 'name' => $row['name'], 'email' => $row['email'], 'role' => $row['role']],
+            'user'    => [
+                'id'                => $row['user_id'],
+                'name'              => $row['name'],
+                'email'             => $row['email'],
+                'role'              => $row['role'],
+                'email_verified_at' => $row['used_at']
+            ],
         ]);
     }
 
@@ -225,9 +263,15 @@ function handle_verify_email_token($db, $input) {
 
     send_json([
         'success' => true,
-        'message' => 'Email verified! Welcome to Vantage Markets.',
+        'message' => 'Email verified! Welcome to vāntãgeCFD.',
         'token'   => $auth_token,
-        'user'    => ['id' => $user_id, 'name' => $row['name'], 'email' => $row['email'], 'role' => $row['role']],
+        'user'    => [
+            'id'                => $user_id,
+            'name'              => $row['name'],
+            'email'             => $row['email'],
+            'role'              => $row['role'],
+            'email_verified_at' => date('Y-m-d H:i:s')
+        ],
     ]);
 }
 
@@ -1051,6 +1095,62 @@ function handle_demo_topup($db, $input) {
 }
 // --- 5. Action Handlers (Procedural) ---
 
+function handle_forgot_password($db, $input) {
+    $email = $db->real_escape_string($input['email'] ?? '');
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) send_json(['success' => false, 'error' => 'Invalid email'], 400);
+
+    $res = $db->query("SELECT id, name FROM users WHERE email = '$email' LIMIT 1");
+    if ($res->num_rows === 0) {
+        // For security, don't reveal if user exists, but here we can just say success
+        send_json(['success' => true, 'message' => 'If this email is registered, you will receive a reset link.']);
+    }
+
+    $user = $res->fetch_assoc();
+    $user_id = $user['id'];
+    $token = bin2hex(random_bytes(32));
+    $token_hash = password_hash($token, PASSWORD_BCRYPT);
+    $expires = date('Y-m-d H:i:s', strtotime('+1 hour'));
+
+    $db->query("INSERT INTO password_resets (user_id, token_hash, expires_at) VALUES ($user_id, '$token_hash', '$expires')");
+
+    // In a real app, send email here. For now, we return it for the demo/frontend to use.
+    send_json([
+        'success' => true,
+        'message' => 'Reset link generated (Demo mode).',
+        'debug_token' => $token
+    ]);
+}
+
+function handle_reset_password($db, $input) {
+    $token = $input['token'] ?? '';
+    $email = $db->real_escape_string($input['email'] ?? '');
+    $new_pass = $input['password'] ?? '';
+
+    if (empty($token) || empty($new_pass)) send_json(['success' => false, 'error' => 'Missing fields'], 400);
+
+    $res = $db->query("SELECT pr.id, pr.user_id, pr.token_hash FROM password_resets pr JOIN users u ON u.id = pr.user_id WHERE u.email = '$email' AND pr.used_at IS NULL AND pr.expires_at > NOW() ORDER BY pr.created_at DESC LIMIT 1");
+
+    if ($res->num_rows === 0) send_json(['success' => false, 'error' => 'Invalid or expired reset link'], 400);
+
+    $row = $res->fetch_assoc();
+    if (!password_verify($token, $row['token_hash'])) send_json(['success' => false, 'error' => 'Invalid token'], 400);
+
+    $hash = password_hash($new_pass, PASSWORD_BCRYPT);
+    $user_id = $row['user_id'];
+    $pr_id = $row['id'];
+
+    $db->begin_transaction();
+    try {
+        $db->query("UPDATE users SET password_hash = '$hash' WHERE id = $user_id");
+        $db->query("UPDATE password_resets SET used_at = NOW() WHERE id = $pr_id");
+        $db->commit();
+        send_json(['success' => true, 'message' => 'Password reset successfully.']);
+    } catch (Exception $e) {
+        $db->rollback();
+        send_json(['success' => false, 'error' => 'Failed to reset password'], 500);
+    }
+}
+
 function handle_login($db, $input) {
     $email = $db->real_escape_string($input['email'] ?? '');
     $pass  = $input['password'] ?? '';
@@ -1449,6 +1549,118 @@ function handle_admin_dashboard_stats($db) {
  
 // ─── POST ?action=admin_approve_transaction ───────────────────────────────────
 // Payload: { transaction_id }
+function is_admin(): bool {
+    $header = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+    if (!str_starts_with($header, 'Bearer ')) return false;
+    $token = base64_decode(substr($header, 7));
+    $data  = json_decode($token, true);
+    return ($data['role'] ?? '') === 'admin';
+}
+
+function handle_admin_update_user($db, $input) {
+    if (!is_admin()) send_json(['success' => false, 'error' => 'Unauthorized'], 403);
+    $id = (int)($input['id'] ?? 0);
+    $name = $db->real_escape_string($input['name'] ?? '');
+    $email = $db->real_escape_string($input['email'] ?? '');
+    $status = $db->real_escape_string($input['status'] ?? 'pending');
+    $role = $db->real_escape_string($input['role'] ?? 'trader');
+    $balance = (float)($input['wallet_balance'] ?? 0);
+
+    if (!$id) send_json(['success' => false, 'error' => 'Missing ID'], 400);
+
+    $sql = "UPDATE users SET name='$name', email='$email', status='$status', role='$role', wallet_balance=$balance WHERE id=$id";
+    if ($db->query($sql)) {
+        send_json(['success' => true, 'message' => 'User updated']);
+    } else {
+        send_json(['success' => false, 'error' => $db->error], 500);
+    }
+}
+
+function handle_admin_delete_user($db, $input) {
+    if (!is_admin()) send_json(['success' => false, 'error' => 'Unauthorized'], 403);
+    $id = (int)($input['id'] ?? 0);
+    if (!$id) send_json(['success' => false, 'error' => 'Missing ID'], 400);
+
+    if ($db->query("DELETE FROM users WHERE id=$id")) {
+        send_json(['success' => true, 'message' => 'User deleted']);
+    } else {
+        send_json(['success' => false, 'error' => $db->error], 500);
+    }
+}
+
+function handle_admin_get_signals($db) {
+    if (!is_admin()) send_json(['success' => false, 'error' => 'Unauthorized'], 403);
+    $res = $db->query("SELECT s.*, u.email as provider_email FROM signals s JOIN users u ON u.id = s.user_id");
+    send_json(['success' => true, 'data' => $res->fetch_all(MYSQLI_ASSOC)]);
+}
+
+function handle_admin_upsert_signal($db, $input) {
+    if (!is_admin()) send_json(['success' => false, 'error' => 'Unauthorized'], 403);
+    $id = (int)($input['id'] ?? 0);
+    $user_id = (int)($input['user_id'] ?? 0);
+    $name = $db->real_escape_string($input['name'] ?? '');
+    $desc = $db->real_escape_string($input['description'] ?? '');
+    $roi = (float)($input['roi'] ?? 0);
+    $win_rate = (float)($input['win_rate'] ?? 0);
+    $drawdown = (float)($input['drawdown'] ?? 0);
+    $status = $db->real_escape_string($input['status'] ?? 'active');
+
+    if (!$user_id || !$name) send_json(['success' => false, 'error' => 'Missing fields'], 400);
+
+    if ($id) {
+        $sql = "UPDATE signals SET user_id=$user_id, name='$name', description='$desc', roi=$roi, win_rate=$win_rate, drawdown=$drawdown, status='$status' WHERE id=$id";
+    } else {
+        $sql = "INSERT INTO signals (user_id, name, description, roi, win_rate, drawdown, status) VALUES ($user_id, '$name', '$desc', $roi, $win_rate, $drawdown, '$status')";
+    }
+
+    if ($db->query($sql)) {
+        send_json(['success' => true, 'message' => 'Signal saved']);
+    } else {
+        send_json(['success' => false, 'error' => $db->error], 500);
+    }
+}
+
+function handle_admin_get_settings($db) {
+    if (!is_admin()) send_json(['success' => false, 'error' => 'Unauthorized'], 403);
+    $res = $db->query("SELECT * FROM settings");
+    $settings = [];
+    while ($row = $res->fetch_assoc()) {
+        $settings[$row['key']] = $row['value'];
+    }
+    send_json(['success' => true, 'data' => $settings]);
+}
+
+function handle_get_site_settings($db) {
+    $res = $db->query("SELECT `key`, `value` FROM settings WHERE `key` IN ('site_name', 'site_logo', 'support_email', 'default_currency')");
+    $settings = [];
+    while ($row = $res->fetch_assoc()) {
+        $settings[$row['key']] = $row['value'];
+    }
+    send_json(['success' => true, 'data' => $settings]);
+}
+
+function handle_admin_update_settings($db, $input) {
+    if (!is_admin()) send_json(['success' => false, 'error' => 'Unauthorized'], 403);
+    foreach ($input as $key => $value) {
+        $key = $db->real_escape_string($key);
+        $value = $db->real_escape_string((string)$value);
+        $db->query("INSERT INTO settings (`key`, `value`) VALUES ('$key', '$value') ON DUPLICATE KEY UPDATE `value`='$value'");
+    }
+    send_json(['success' => true, 'message' => 'Settings updated']);
+}
+
+function handle_admin_delete_signal($db, $input) {
+    if (!is_admin()) send_json(['success' => false, 'error' => 'Unauthorized'], 403);
+    $id = (int)($input['id'] ?? 0);
+    if (!$id) send_json(['success' => false, 'error' => 'Missing ID'], 400);
+
+    if ($db->query("DELETE FROM signals WHERE id=$id")) {
+        send_json(['success' => true, 'message' => 'Signal deleted']);
+    } else {
+        send_json(['success' => false, 'error' => $db->error], 500);
+    }
+}
+
 function handle_admin_approve_transaction($db, $input) {
     $txn_id = (int)($input['transaction_id'] ?? 0);
     if (!$txn_id) send_json(['success' => false, 'error' => 'Missing transaction_id.'], 400);

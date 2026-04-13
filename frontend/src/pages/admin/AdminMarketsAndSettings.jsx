@@ -1,5 +1,8 @@
+import { useState, useEffect } from "react";
 import { spreadsData, tickerData } from "../../data/mockData";
 import { Badge } from "../../components/ui";
+import { adminService } from "../../services/api";
+import { Loader2, Save, CheckCircle } from "lucide-react";
 
 export function AdminMarkets() {
   return (
@@ -79,34 +82,78 @@ export function AdminMarkets() {
 }
 
 export function AdminSettings() {
+  const [settings, setSettings] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  useEffect(() => {
+    adminService.getSettings().then(res => {
+      setSettings(res.data || {});
+      setLoading(false);
+    });
+  }, []);
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    setMsg("");
+    try {
+      await adminService.updateSettings(settings);
+      setMsg("Settings saved successfully!");
+      setTimeout(() => setMsg(""), 3000);
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const updateKey = (key, val) => setSettings(prev => ({ ...prev, [key]: val }));
+
+  if (loading) return <div className="flex justify-center py-20"><Loader2 className="w-10 h-10 animate-spin text-accent" /></div>;
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-display font-extrabold text-3xl text-primary mb-1">Settings</h1>
-        <p className="text-sm text-[#4A5568]">Platform configuration and admin account settings.</p>
+      <div className="flex justify-between items-end">
+        <div>
+          <h1 className="font-display font-extrabold text-3xl text-primary mb-1">Settings</h1>
+          <p className="text-sm text-[#4A5568]">Platform configuration and admin account settings.</p>
+        </div>
+        {msg && (
+          <div className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-4 py-2 rounded-lg border border-emerald-100 animate-fade-in">
+            <CheckCircle className="w-4 h-4" />
+            <span className="text-xs font-bold">{msg}</span>
+          </div>
+        )}
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Platform settings */}
         <div className="bg-white border border-surface-border rounded-xl shadow-card p-6">
           <h3 className="font-display font-bold text-base text-primary mb-5">Platform Settings</h3>
-          <div className="space-y-5">
+          <form onSubmit={handleSave} className="space-y-5">
             {[
-              { label: "Site Name", value: "Vantage Markets" },
-              { label: "Support Email", value: "support@vantagemarkets.com" },
-              { label: "Default Currency", value: "USD" },
-              { label: "Min Deposit (USD)", value: "50" },
+              { label: "Site Name", key: "site_name" },
+              { label: "Site Logo (URL)", key: "site_logo" },
+              { label: "Support Email", key: "support_email" },
+              { label: "Default Currency", key: "default_currency" },
+              { label: "Min Deposit (USD)", key: "min_deposit" },
             ].map((f) => (
-              <div key={f.label}>
+              <div key={f.key}>
                 <label className="text-xs font-bold uppercase tracking-wider text-[#8897A9] block mb-1.5">{f.label}</label>
                 <input
-                  defaultValue={f.value}
+                  value={settings[f.key] || ""}
+                  onChange={e => updateKey(f.key, e.target.value)}
                   className="w-full px-4 py-2.5 rounded-[10px] border border-surface-border text-sm text-primary focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/10 transition-all"
                 />
               </div>
             ))}
-            <button className="btn-primary text-sm py-2.5 px-5">Save Changes</button>
-          </div>
+            <button type="submit" disabled={saving} className="btn-primary text-sm py-2.5 px-5 flex items-center gap-2">
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              Save Changes
+            </button>
+          </form>
         </div>
 
         {/* Admin profile */}
@@ -115,7 +162,7 @@ export function AdminSettings() {
           <div className="space-y-5">
             {[
               { label: "Full Name", value: "Admin User" },
-              { label: "Email Address", value: "admin@vantagemarkets.com" },
+              { label: "Email Address", value: "admin@vantageCFD.com" },
               { label: "Role", value: "Super Admin" },
             ].map((f) => (
               <div key={f.label}>
@@ -139,22 +186,29 @@ export function AdminSettings() {
           <h3 className="font-display font-bold text-base text-primary mb-5">Feature Toggles</h3>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {[
-              { label: "Registration Open", on: true },
-              { label: "Copy Trading", on: true },
-              { label: "Demo Accounts", on: true },
-              { label: "Promotions Active", on: true },
-              { label: "Maintenance Mode", on: false },
-              { label: "Email Notifications", on: true },
-              { label: "2FA Required", on: false },
-              { label: "Withdrawal Holds", on: false },
-            ].map((t) => (
-              <div key={t.label} className="flex items-center justify-between bg-surface border border-surface-border rounded-[10px] px-4 py-3">
-                <span className="text-sm font-medium text-primary">{t.label}</span>
-                <div className={`w-10 h-5 rounded-full transition-all cursor-pointer relative ${t.on ? "bg-teal" : "bg-surface-border"}`}>
-                  <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${t.on ? "left-[22px]" : "left-0.5"}`} />
+              { label: "Registration Open", key: "registration_open" },
+              { label: "Copy Trading", key: "copy_trading_enabled" },
+              { label: "Demo Accounts", key: "demo_accounts_enabled" },
+              { label: "Promotions Active", key: "promotions_active" },
+              { label: "Maintenance Mode", key: "maintenance_mode" },
+              { label: "Email Notifications", key: "email_notifications" },
+            ].map((t) => {
+              const isOn = settings[t.key] === "1";
+              return (
+                <div key={t.key} className="flex items-center justify-between bg-surface border border-surface-border rounded-[10px] px-4 py-3">
+                  <span className="text-sm font-medium text-primary">{t.label}</span>
+                  <div
+                    onClick={() => {
+                       updateKey(t.key, isOn ? "0" : "1");
+                       adminService.updateSettings({ [t.key]: isOn ? "0" : "1" });
+                    }}
+                    className={`w-10 h-5 rounded-full transition-all cursor-pointer relative ${isOn ? "bg-teal" : "bg-surface-border"}`}
+                  >
+                    <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${isOn ? "left-[22px]" : "left-0.5"}`} />
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>

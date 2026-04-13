@@ -66,7 +66,7 @@ export default function AdminDashboard() {
       {/* Header */}
       <div>
         <h1 className="font-display font-extrabold text-3xl text-primary mb-1">Dashboard</h1>
-        <p className="text-sm text-[#4A5568]">Welcome back. Here is what is happening across Vantage Markets today.</p>
+        <p className="text-sm text-[#4A5568]">Welcome back. Here is what is happening across vāntãgeCFD today.</p>
       </div>
 
       {/* Stat cards */}

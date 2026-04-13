@@ -112,7 +112,7 @@ const handleSubmit = async (e) => {
           </div>
           <h2 className="font-display font-extrabold text-2xl text-primary mb-3">Account Created</h2>
           <p className="text-[#4A5568] leading-relaxed mb-8">
-            Your Vantage Markets account has been created. Please check your
+            Your vāntãgeCFD account has been created. Please check your
             email to verify your address before logging in.
           </p>
           <Link to="/login" className="btn-primary inline-block px-8 py-3">
@@ -134,7 +134,7 @@ const handleSubmit = async (e) => {
               <path d="M10 2L3 7v6l7 5 7-5V7L10 2zm0 2.5l5 3.5v4L10 15 5 12V8l5-3.5z" />
             </svg>
           </div>
-          <span className="font-display font-extrabold text-xl text-white">Vantage Markets</span>
+          <span className="font-display font-extrabold text-xl text-white">vāntãgeCFD</span>
         </Link>
         <div className="relative z-10">
           <h2 className="font-display font-extrabold text-4xl text-white mb-6 leading-tight">

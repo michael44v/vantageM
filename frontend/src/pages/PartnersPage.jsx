@@ -63,10 +63,10 @@ export default function PartnersPage() {
           </p>
           <h1 className="font-display font-extrabold text-5xl text-white mb-4 leading-tight">
             Earn More with the<br />
-            <span className="text-gold">Vantage Partner Program</span>
+            <span className="text-gold">vāntãgeCFD Partner Program</span>
           </h1>
           <p className="text-lg text-white/55 max-w-xl">
-            Join thousands of IBs and affiliates earning generous commissions by referring clients to Vantage Markets.
+            Join thousands of IBs and affiliates earning generous commissions by referring clients to vāntãgeCFD.
           </p>
         </div>
       </section>
@@ -117,7 +117,7 @@ export default function PartnersPage() {
                   Estimate Your Monthly Earnings
                 </h2>
                 <p className="text-white/55 leading-relaxed">
-                  Use our interactive calculator to see how much you could earn as an Vantage Markets IB based on your referral volume and client activity.
+                  Use our interactive calculator to see how much you could earn as an vāntãgeCFD IB based on your referral volume and client activity.
                 </p>
               </div>
               <div className="bg-white/6 border-l border-white/10 p-12 flex flex-col gap-6">

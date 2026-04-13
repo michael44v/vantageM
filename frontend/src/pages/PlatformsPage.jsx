@@ -44,7 +44,7 @@ export default function PlatformsPage() {
             Trade on Any<br /><span className="text-accent-light">Platform You Choose</span>
           </h1>
           <p className="text-lg text-white/55 max-w-xl">
-            MetaTrader 4, MetaTrader 5, TradingView, and our own Vantage App — choose the platform that fits your style.
+            MetaTrader 4, MetaTrader 5, TradingView, and our own vāntãgeCFD App — choose the platform that fits your style.
           </p>
         </div>
       </section>
@@ -93,7 +93,7 @@ export default function PlatformsPage() {
               <thead>
                 <tr className="bg-primary">
                   <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-white/60 w-48">Feature</th>
-                  {["MetaTrader 5", "MetaTrader 4", "TradingView", "Vantage App"].map((h) => (
+                  {["MetaTrader 5", "MetaTrader 4", "TradingView", "vāntãgeCFD App"].map((h) => (
                     <th key={h} className="px-5 py-4 text-center text-xs font-semibold uppercase tracking-wider text-white/60">{h}</th>
                   ))}
                 </tr>

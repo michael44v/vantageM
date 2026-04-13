@@ -11,7 +11,7 @@ export default function UnverifiedBanner() {
   const [error, setError]         = useState("");
 
   // Only show if email_verified_at is null/missing
-  const isUnverified = user && !user.email_verified_at && !dismissed;
+  const isUnverified = user && !user.email_verified_at;
 
   // Check dismissed state in sessionStorage so it re-appears next login
   useEffect(() => {
@@ -41,7 +41,7 @@ export default function UnverifiedBanner() {
   return (
     <>
       {/* Backdrop */}
-      <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" onClick={handleDismiss} />
+      <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"   />
 
       {/* Modal */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
@@ -52,7 +52,7 @@ export default function UnverifiedBanner() {
 
           <div className="p-8">
             {/* Close */}
-            <button onClick={handleDismiss}
+            <button
               className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-lg text-[#8897A9] hover:text-primary hover:bg-surface transition-colors">
               <X className="w-4 h-4" />
             </button>
@@ -107,9 +107,9 @@ export default function UnverifiedBanner() {
               </>
             )}
 
-            <button onClick={handleDismiss}
+            <button
               className="w-full py-2.5 rounded-xl border border-surface-border text-[#8897A9] text-sm font-medium hover:text-primary hover:border-[#8897A9] transition-colors">
-              Remind me later
+              Please verify to continue
             </button>
           </div>
         </div>

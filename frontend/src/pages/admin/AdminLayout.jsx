@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, NavLink, useNavigate, Outlet } from "react-router-dom";
 import {
   LayoutDashboard, Users, ArrowLeftRight, TrendingUp,
-  Bell, Settings, LogOut, Menu, X, ChevronRight, ShieldCheck,Activity,
+  Bell, Settings, LogOut, Menu, X, ChevronRight, ShieldCheck, Activity, Mail
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
@@ -12,6 +12,8 @@ const navItems = [
   { label: "Users", path: "/admin/users", icon: Users },
   { label: "Transactions", path: "/admin/transactions", icon: ArrowLeftRight },
   { label: "KYC Review", path: "/admin/kyc", icon: ShieldCheck },
+  { label: "Broadcast Mail", path: "/admin/mail", icon: Mail },
+  { label: "Copy Trading", path: "/admin/copy-trading", icon: Users },
   { label: "Markets", path: "/admin/markets", icon: TrendingUp },
   { label: "Settings", path: "/admin/settings", icon: Settings },
 ];
@@ -43,7 +45,7 @@ export default function AdminLayout() {
           </div>
           {sidebarOpen && (
             <span className="font-display font-extrabold text-base text-white truncate">
-              Vantage Admin
+              vāntãgeCFD Admin
             </span>
           )}
         </div>

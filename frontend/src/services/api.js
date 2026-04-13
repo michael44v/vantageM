@@ -1,5 +1,5 @@
 /**
- * Vantage Markets — Frontend API Service
+ * vāntãgeCFD — Frontend API Service
  *
  * Base: https://vantagemarketts.com/backend/api.php
  * Auth: PHP returns a base64 token on login.
@@ -58,13 +58,16 @@ export const mailService = {
    * Sends the registration confirmation / welcome email.
    * Called fire-and-forget after authService.register() succeeds.
    */
-registerConfirm: ({ firstName, lastName, email, verifyToken }) =>
-  mailReq("send_mail", {
-    first_name:   firstName,
-    last_name:    lastName,
-    email,
-    verify_token: verifyToken,
-  }),
+  registerConfirm: ({ firstName, lastName, email, verifyToken }) =>
+    mailReq("send_mail", {
+      first_name: firstName,
+      last_name: lastName,
+      email,
+      verify_token: verifyToken,
+    }),
+
+  sendCustomMail: ({ email, subject, message }) =>
+    mailReq("send_mail", { email, subject, message }),
 };
 
 
@@ -146,6 +149,15 @@ resendVerification: (userId) =>
   },
 
   logout: () => clearToken(),
+
+  requestPasswordReset: (email) =>
+    req("forgot_password", { method: "POST", body: { email } }),
+
+  resetPassword: ({ email, token, password }) =>
+    req("reset_password", {
+      method: "POST",
+      body: { email, token, password },
+    }),
 };
 
 // ── Trading Accounts ──────────────────────────────────────────────────────────
@@ -444,4 +456,18 @@ export const adminService = {
       method: "POST",
       body: { transaction_id: id },
     }),
+
+  updateUser: (user) => req("admin_update_user", { method: "POST", body: user }),
+  deleteUser: (id) => req("admin_delete_user", { method: "POST", body: { id } }),
+
+  getSignals: () => req("admin_get_signals"),
+  upsertSignal: (signal) => req("admin_upsert_signal", { method: "POST", body: signal }),
+  deleteSignal: (id) => req("admin_delete_signal", { method: "POST", body: { id } }),
+
+  getSettings: () => req("admin_get_settings"),
+  updateSettings: (settings) => req("admin_update_settings", { method: "POST", body: settings }),
+};
+
+export const siteService = {
+  getSettings: () => req("get_site_settings"),
 };

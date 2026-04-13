@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { Menu, X, ChevronDown, LogOut, LayoutDashboard } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { siteService } from "../../services/api";
 
 const navItems = [
   { label: "Trading", path: "/trading" },
@@ -14,12 +15,20 @@ const navItems = [
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [siteName, setSiteName] = useState("vāntãgeCFD");
+  const [siteLogo, setSiteLogo] = useState("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQXEXUBiCFf2GdsMcVX_Mk0PC_VOunqPDKjahyDEIp2_-QI7n0StED0DglG9A&s");
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", onScroll);
+
+    siteService.getSettings().then(res => {
+       if (res.data?.site_name) setSiteName(res.data.site_name);
+       if (res.data?.site_logo) setSiteLogo(res.data.site_logo);
+    }).catch(() => {});
+
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
@@ -39,10 +48,10 @@ export default function Navbar() {
         <div className="max-w-[1200px] mx-auto px-10 h-full flex items-center justify-between gap-8" style={{backgroundColor:"white"}}>
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2.5 flex-shrink-0">
-            <div className="w-9 h-9 bg-accent rounded-[9px] flex items-center justify-center">
-             <img src='https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQXEXUBiCFf2GdsMcVX_Mk0PC_VOunqPDKjahyDEIp2_-QI7n0StED0DglG9A&s' style={{width:"60px",height:"60px"}}/>
+            <div className="w-9 h-9 bg-accent rounded-[9px] flex items-center justify-center overflow-hidden">
+             <img src={siteLogo} alt="Logo" style={{width:"60px",height:"60px", objectFit: "cover"}}/>
             </div>
-            <span className="font-display font-extrabold text-xl text-primary">Vantage Markets</span>
+            <span className="font-display font-extrabold text-xl text-primary">{siteName}</span>
           </Link>
 
           {/* Desktop nav */}

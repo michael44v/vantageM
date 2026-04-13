@@ -13,12 +13,12 @@ const values = [
 ];
 
 const timeline = [
-  { year: "2009", title: "Vantage Markets Founded", desc: "Started with a small team in Australia focused on providing transparent forex trading to retail traders." },
+  { year: "2009", title: "vāntãgeCFD Founded", desc: "Started with a small team in Australia focused on providing transparent forex trading to retail traders." },
   { year: "2013", title: "ASIC Regulated", desc: "Received full ASIC regulation, cementing our commitment to the highest regulatory standards." },
   { year: "2016", title: "1 Million Users", desc: "Reached our first million registered traders. Expanded MT4 and MT5 offerings with copy trading features." },
   { year: "2019", title: "African Expansion", desc: "Launched dedicated services for South Africa, Kenya, Nigeria, and Botswana with localised payment methods." },
   { year: "2021", title: "FCA Authorised", desc: "Received FCA authorisation in the United Kingdom, extending our regulated presence to European clients." },
-  { year: "2024", title: "5 Million Traders", desc: "Reached the 5 million registered user milestone. Launched the Vantage proprietary app and TradingView integration." },
+  { year: "2024", title: "5 Million Traders", desc: "Reached the 5 million registered user milestone. Launched the vāntãgeCFD proprietary app and TradingView integration." },
   { year: "2026", title: "The Journey Continues", desc: "Expanding product range, enhancing technology, and continuing to serve traders across 100+ countries worldwide." },
 ];
 
@@ -41,7 +41,7 @@ export default function AboutPage() {
             <span className="mx-2">/</span>About
           </p>
           <h1 className="font-display font-extrabold text-5xl text-white mb-4 leading-tight">
-            About <span className="text-accent-light">Vantage Markets</span>
+            About <span className="text-accent-light">vāntãgeCFD</span>
           </h1>
           <p className="text-lg text-white/55 max-w-xl">
             A globally trusted CFD broker with 15+ years of experience — built for traders who demand institutional quality from their broker.
@@ -56,7 +56,7 @@ export default function AboutPage() {
             <div>
               <SectionHeader tag="Our Mission" title={<>Making Professional Trading <span className="text-accent">Accessible to All</span></>} />
               <p className="text-[#4A5568] leading-relaxed mb-4">
-                Vantage Markets was founded with a single mission: to democratise access to global financial markets for every trader, whether they are based in Lagos, Nairobi, Johannesburg, or London.
+                vāntãgeCFD was founded with a single mission: to democratise access to global financial markets for every trader, whether they are based in Lagos, Nairobi, Johannesburg, or London.
               </p>
               <p className="text-[#4A5568] leading-relaxed mb-4">
                 We believe every trader deserves institutional-grade technology, fair pricing, and transparent execution — regardless of account size.
@@ -103,7 +103,7 @@ export default function AboutPage() {
           <SectionHeader
             tag="Regulation"
             title={<>Fully Regulated and <span className="text-accent">Globally Trusted</span></>}
-            subtitle="Vantage Markets operates under strict regulatory oversight across multiple jurisdictions — ensuring the highest standards of client protection."
+            subtitle="vāntãgeCFD operates under strict regulatory oversight across multiple jurisdictions — ensuring the highest standards of client protection."
             center
           />
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
@@ -116,7 +116,7 @@ export default function AboutPage() {
             ))}
           </div>
           <div className="bg-white border border-surface-border rounded-[12px] p-5 text-xs text-[#8897A9] leading-relaxed">
-            VIG Group, operating under the brand Vantage Markets, is an investment dealer authorised and regulated by the Mauritius Financial Services Commission (FSC). Business operations are protected by insurance coverage provided by Willis Towers Watson (WTW), a global insurance brokerage established in 1828. This coverage includes claims eligibility of up to USD 1,000,000 per claimant. Vantage Markets is a member of The Financial Commission, an international organisation engaged in the resolution of disputes within the financial services industry.
+            VIG Group, operating under the brand vāntãgeCFD, is an investment dealer authorised and regulated by the Mauritius Financial Services Commission (FSC). Business operations are protected by insurance coverage provided by Willis Towers Watson (WTW), a global insurance brokerage established in 1828. This coverage includes claims eligibility of up to USD 1,000,000 per claimant. vāntãgeCFD is a member of The Financial Commission, an international organisation engaged in the resolution of disputes within the financial services industry.
           </div>
         </div>
       </section>

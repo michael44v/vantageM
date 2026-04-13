@@ -105,7 +105,7 @@ export default function HomePage() {
             </div>
 
             <h1 className="font-display font-extrabold text-white leading-[1.08] mb-6" style={{ fontSize: "clamp(36px,5vw,62px)" }}>
-              Vantage Markets<br /><span className="text-[#FF6B35]">Ultimate Trading</span><br />Machine
+              vāntãgeCFD<br /><span className="text-[#FF6B35]">Ultimate Trading</span><br />Machine
             </h1>
 
             <p className="text-lg text-white/65 leading-relaxed mb-8 max-w-lg">
@@ -194,7 +194,7 @@ export default function HomePage() {
             <div className="grid grid-cols-3 bg-primary px-7 py-[18px] items-center">
               <div className="text-[13px] font-semibold text-white/70">Instrument</div>
               <div className="text-[13px] font-semibold text-white flex items-center gap-2 justify-center">
-                <span className="w-2 h-2 rounded-full bg-[#00B4A6]" />Vantage Markets
+                <span className="w-2 h-2 rounded-full bg-[#00B4A6]" />vāntãgeCFD
               </div>
               <div className="text-[13px] font-semibold text-white/70 text-right">Market Average</div>
             </div>
@@ -232,7 +232,7 @@ export default function HomePage() {
           style={{ background: "rgba(0,180,166,0.10)" }} />
         <div className="max-w-[1200px] mx-auto px-10 relative z-10">
           <div className="text-center mb-16">
-            <p className="text-xs font-bold tracking-[0.1em] uppercase text-[#00B4A6] mb-3">Why Vantage Markets</p>
+            <p className="text-xs font-bold tracking-[0.1em] uppercase text-[#00B4A6] mb-3">Why vāntãgeCFD</p>
             <h2 className="font-display font-extrabold text-4xl text-white">An Award-Winning Broker</h2>
           </div>
           <div className="grid grid-cols-2 lg:grid-cols-4 rounded-[20px] overflow-hidden mb-16 border border-white/10" style={{ background: "rgba(255,255,255,0.10)", gap: "1px" }}>
@@ -245,7 +245,7 @@ export default function HomePage() {
           </div>
           <div className="grid lg:grid-cols-3 gap-6">
             {[
-              { icon: <Shield className="w-7 h-7" />, title: "Trusted CFD Broker", desc: "With over 15 years of experience, Vantage Markets has built a reputation as a trusted, award-winning CFD broker. Trade 1,000+ products backed by seamless execution and 24/7 support." },
+              { icon: <Shield className="w-7 h-7" />, title: "Trusted CFD Broker", desc: "With over 15 years of experience, vāntãgeCFD has built a reputation as a trusted, award-winning CFD broker. Trade 1,000+ products backed by seamless execution and 24/7 support." },
               { icon: <Zap className="w-7 h-7" />, title: "Secure Funds", desc: "Client funds are held in segregated trust accounts with top-tier banks, separate from our operational capital. Insurance coverage up to USD 1,000,000 per claimant." },
               { icon: <Globe className="w-7 h-7" />, title: "Competitive Spreads", desc: "Trade smarter with ultra-tight spreads designed to help you manage costs effectively. Competitive pricing across all products to optimise your trading." },
             ].map((f) => (
@@ -299,7 +299,7 @@ export default function HomePage() {
                 Trade <span className="text-accent">Anytime, Anywhere</span>
               </h2>
               <p className="text-base text-[#4A5568] leading-relaxed mb-4">
-                One of the world's leading CFD brokers with over 15 years of market experience, Vantage Markets provides traders with access to 1,000+ CFD products, including forex, indices, commodities, shares, ETFs, and bonds.
+                One of the world's leading CFD brokers with over 15 years of market experience, vāntãgeCFD provides traders with access to 1,000+ CFD products, including forex, indices, commodities, shares, ETFs, and bonds.
               </p>
               <p className="text-base text-[#4A5568] leading-relaxed mb-6">
                 Trade CFDs with ease on desktop or mobile using our variety of advanced trading tools and features from your home country, whether you are from South Africa, Kenya, Botswana or Nigeria.
