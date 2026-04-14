@@ -65,6 +65,8 @@ export default function AdminUsers() {
     await handleUpdate({ ...user, status: newStatus });
   };
 
+  if (loading) return <div className="flex justify-center py-20"><Loader2 className="w-10 h-10 animate-spin text-accent" /></div>;
+
   return (
     <div className="space-y-6">
       {/* Header */}
