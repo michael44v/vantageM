@@ -153,6 +153,9 @@ case 'admin_reject_deposit':
 case 'admin_reject_transaction':
     handle_admin_reject_transaction($db, $input);
     break;
+case 'admin_adjust_balance':
+    handle_admin_adjust_balance($db, $input);
+    break;
 
 case 'admin_update_user':
     handle_admin_update_user($db, $input);
@@ -1796,6 +1799,25 @@ function handle_admin_approve_transaction($db, $input) {
     }
  
     send_json(['success' => true, 'message' => 'Transaction approved.']);
+}
+
+function handle_admin_adjust_balance($db, $input) {
+    if (!is_admin()) send_json(['success' => false, 'error' => 'Unauthorized'], 403);
+    $id = (int)($input['user_id'] ?? 0);
+    $amount = (float)($input['amount'] ?? 0);
+    $type = $input['type'] ?? 'add'; // 'add' or 'deduct'
+
+    if (!$id) send_json(['success' => false, 'error' => 'Missing User ID'], 400);
+    if ($amount <= 0) send_json(['success' => false, 'error' => 'Invalid amount'], 400);
+
+    $delta = ($type === 'deduct') ? -$amount : $amount;
+
+    $sql = "UPDATE users SET wallet_balance = wallet_balance + $delta WHERE id = $id";
+    if ($db->query($sql)) {
+        send_json(['success' => true, 'message' => 'Balance adjusted successfully']);
+    } else {
+        send_json(['success' => false, 'error' => $db->error], 500);
+    }
 }
 
 function handle_admin_reject_transaction($db, $input) {
