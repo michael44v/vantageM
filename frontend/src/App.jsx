@@ -8,6 +8,7 @@ import { RequireAdmin, RedirectIfAuth, RequireAuth } from "./components/Protecte
 import HomePage from "./pages/HomePage";
 import TradingPage from "./pages/TradingPage";
 import UnverifiedBanner from "./components/UnverifiedBanner";
+import WhatsAppButton from "./components/WhatsAppButton";
 import PlatformsPage from "./pages/PlatformsPage";
 import PromotionsPage from "./pages/PromotionsPage";
 import PartnersPage from "./pages/PartnersPage";
@@ -51,7 +52,8 @@ export default function App() {
 
   return (
     <AuthProvider>
-<UnverifiedBanner />
+      <UnverifiedBanner />
+      <WhatsAppButton />
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<HomePage />} />

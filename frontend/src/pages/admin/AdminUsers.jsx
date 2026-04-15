@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Filter, MoreHorizontal, Eye, Ban, Trash2, Edit2, Loader2, Save, X } from "lucide-react";
+import { Search, Filter, MoreHorizontal, Eye, Ban, Trash2, Edit2, Loader2, Save, X, DollarSign } from "lucide-react";
 import { adminService } from "../../services/api";
 import { Badge, Input } from "../../components/ui";
 
@@ -12,6 +12,7 @@ export default function AdminUsers() {
   const [statusFilter, setStatusFilter] = useState("All");
   const [selected, setSelected] = useState(null);
   const [editing, setEditing] = useState(null);
+  const [adjusting, setAdjusting] = useState(null); // userId
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -51,11 +52,25 @@ export default function AdminUsers() {
     }
   };
 
+  const handleAdjustBalance = async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const amount = fd.get("amount");
+    const type = fd.get("type");
+    try {
+      await adminService.adjustBalance(adjusting, amount, type);
+      setAdjusting(null);
+      fetchUsers();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
   const filtered = users.filter((u) => {
     const matchSearch =
-      u.name.toLowerCase().includes(search.toLowerCase()) ||
-      u.email.toLowerCase().includes(search.toLowerCase()) ||
-      u.country.toLowerCase().includes(search.toLowerCase());
+      (u.name || "").toLowerCase().includes(search.toLowerCase()) ||
+      (u.email || "").toLowerCase().includes(search.toLowerCase()) ||
+      (u.country || "").toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === "All" || u.status === statusFilter;
     return matchSearch && matchStatus;
   });
@@ -122,7 +137,7 @@ export default function AdminUsers() {
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full bg-accent/10 text-accent font-bold text-xs flex items-center justify-center flex-shrink-0">
-                        {u.name[0]}
+                        {u.name ? u.name[0] : "?"}
                       </div>
                       <div>
                         <div className="font-semibold text-primary text-sm">{u.name}</div>
@@ -133,14 +148,14 @@ export default function AdminUsers() {
                   <td className="px-5 py-4 text-sm text-[#4A5568]">{u.country}</td>
                   <td className="px-5 py-4">
                     <span className="text-xs font-semibold text-primary bg-surface border border-surface-border px-2.5 py-1 rounded-full">
-                      {u.account}
+                      {u.account || u.role}
                     </span>
                   </td>
-                  <td className="px-5 py-4 font-semibold text-primary text-sm">{u.balance}</td>
+                  <td className="px-5 py-4 font-semibold text-primary text-sm">${parseFloat(u.wallet_balance || 0).toLocaleString()}</td>
                   <td className="px-5 py-4">
                     <Badge variant={statusVariant(u.status)}>{u.status}</Badge>
                   </td>
-                  <td className="px-5 py-4 text-xs text-[#8897A9]">{u.joined}</td>
+                  <td className="px-5 py-4 text-xs text-[#8897A9]">{new Date(u.created_at).toLocaleDateString()}</td>
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
@@ -156,6 +171,13 @@ export default function AdminUsers() {
                         title="Edit"
                       >
                         <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => setAdjusting(u.id)}
+                        className="p-1.5 rounded-[8px] text-[#4A5568] hover:bg-teal/10 hover:text-teal transition-all"
+                        title="Adjust Balance"
+                      >
+                        <DollarSign className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => toggleStatus(u)}
@@ -194,6 +216,32 @@ export default function AdminUsers() {
           </div>
         </div>
       </div>
+
+      {/* Adjust Balance Modal */}
+      {adjusting && (
+        <div className="fixed inset-0 bg-primary/60 backdrop-blur-sm z-50 flex items-center justify-center p-6" onClick={() => setAdjusting(null)}>
+          <div className="bg-white rounded-xl p-8 max-w-sm w-full shadow-xl animate-fade-in-up" onClick={(e) => e.stopPropagation()}>
+            <h2 className="font-display font-extrabold text-xl text-primary mb-6">Adjust Balance</h2>
+            <form onSubmit={handleAdjustBalance} className="space-y-4">
+              <div>
+                <label className="text-xs font-bold uppercase text-[#8897A9]">Amount ($)</label>
+                <input name="amount" type="number" step="0.01" required className="input-field mt-1" placeholder="0.00" />
+              </div>
+              <div>
+                <label className="text-xs font-bold uppercase text-[#8897A9]">Type</label>
+                <select name="type" className="input-field mt-1">
+                  <option value="add">Add Funds</option>
+                  <option value="deduct">Deduct Funds</option>
+                </select>
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button type="button" onClick={() => setAdjusting(null)} className="flex-1 py-2.5 rounded-[10px] border border-surface-border text-[#4A5568] font-semibold">Cancel</button>
+                <button type="submit" className="flex-1 py-2.5 rounded-[10px] bg-accent text-white font-semibold">Apply</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Edit modal */}
       {editing && (
@@ -256,7 +304,7 @@ export default function AdminUsers() {
           <div className="bg-white rounded-xl p-8 max-w-md w-full shadow-xl animate-fade-in-up" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-4 mb-6">
               <div className="w-14 h-14 rounded-full bg-accent/10 text-accent font-display font-extrabold text-xl flex items-center justify-center">
-                {selected.name[0]}
+                {selected.name ? selected.name[0] : "?"}
               </div>
               <div>
                 <h2 className="font-display font-extrabold text-xl text-primary">{selected.name}</h2>
@@ -269,9 +317,9 @@ export default function AdminUsers() {
             <div className="space-y-0 divide-y divide-surface-border">
               {[
                 ["Country", selected.country],
-                ["Account Type", selected.account],
-                ["Balance", selected.balance],
-                ["Member Since", selected.joined],
+                ["Account Type", selected.account || selected.role],
+                ["Balance", "$" + parseFloat(selected.wallet_balance || 0).toLocaleString()],
+                ["Member Since", new Date(selected.created_at).toLocaleDateString()],
               ].map(([k, v]) => (
                 <div key={k} className="flex justify-between py-3">
                   <span className="text-sm text-[#8897A9]">{k}</span>
@@ -281,10 +329,10 @@ export default function AdminUsers() {
             </div>
             <div className="flex gap-3 mt-6">
               <button
-                onClick={() => { toggleStatus(selected.id); setSelected(null); }}
+                onClick={() => { toggleStatus(selected); setSelected(null); }}
                 className="flex-1 py-2.5 rounded-[10px] border border-amber-300 bg-amber-50 text-amber-700 text-sm font-semibold hover:bg-amber-100 transition-all"
               >
-                {selected.status === "Active" ? "Suspend User" : "Activate User"}
+                {selected.status === "active" ? "Suspend User" : "Activate User"}
               </button>
               <button onClick={() => setSelected(null)} className="flex-1 py-2.5 rounded-[10px] bg-primary text-white text-sm font-semibold hover:bg-primary-light transition-all">
                 Close

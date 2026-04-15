@@ -478,6 +478,12 @@ export const adminService = {
 
   getMarketData: () => req("get_market_data"),
 
+  adjustBalance: (userId, amount, type) =>
+    req("admin_adjust_balance", {
+      method: "POST",
+      body: { user_id: userId, amount, type },
+    }),
+
   getSettings: () => req("admin_get_settings"),
   updateSettings: (settings) => req("admin_update_settings", { method: "POST", body: settings }),
 };
