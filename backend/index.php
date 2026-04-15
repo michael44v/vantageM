@@ -150,6 +150,9 @@ case 'admin_approve_deposit':
 case 'admin_reject_deposit':
     handle_admin_reject_deposit($db, $input);
     break;
+case 'admin_reject_transaction':
+    handle_admin_reject_transaction($db, $input);
+    break;
 
 case 'admin_update_user':
     handle_admin_update_user($db, $input);
@@ -165,6 +168,21 @@ case 'admin_upsert_signal':
     break;
 case 'admin_delete_signal':
     handle_admin_delete_signal($db, $input);
+    break;
+case 'admin_get_kyc':
+    handle_admin_get_kyc($db);
+    break;
+case 'admin_approve_kyc':
+    handle_admin_approve_kyc($db, $input);
+    break;
+case 'admin_reject_kyc':
+    handle_admin_reject_kyc($db, $input);
+    break;
+case 'admin_get_all_transactions':
+    handle_admin_get_all_transactions($db);
+    break;
+case 'get_market_data':
+    handle_get_market_data($db);
     break;
 case 'admin_get_settings':
     handle_admin_get_settings($db);
@@ -1531,14 +1549,14 @@ function handle_admin_dashboard_stats($db) {
     $stats = [];
  
     $stats['total_users']        = (int)$db->query("SELECT COUNT(*) c FROM users WHERE role='trader'")->fetch_assoc()['c'];
-    $stats['active_users']       = (int)$db->query("SELECT COUNT(*) c FROM users WHERE status='active'")->fetch_assoc()['c'];
+    $stats['active_users']       = (int)$db->query("SELECT COUNT(*) c FROM users WHERE status='active' AND role='trader'")->fetch_assoc()['c'];
     $stats['total_accounts']     = (int)$db->query("SELECT COUNT(*) c FROM trading_accounts")->fetch_assoc()['c'];
     $stats['open_positions']     = (int)$db->query("SELECT COUNT(*) c FROM positions WHERE status='open'")->fetch_assoc()['c'];
  
-    $dep = $db->query("SELECT COALESCE(SUM(amount),0) s FROM transactions WHERE type='deposit' AND status='completed'");
+    $dep = $db->query("SELECT COALESCE(SUM(amount),0) s FROM deposit_requests WHERE status='approved'");
     $stats['total_deposits']     = (float)$dep->fetch_assoc()['s'];
  
-    $pend = $db->query("SELECT COUNT(*) c FROM transactions WHERE status='pending'");
+    $pend = $db->query("SELECT (SELECT COUNT(*) FROM deposit_requests WHERE status='pending') + (SELECT COUNT(*) FROM transactions WHERE status='pending') as c");
     $stats['pending_transactions'] = (int)$pend->fetch_assoc()['c'];
  
     $kyc = $db->query("SELECT COUNT(*) c FROM kyc_documents WHERE status='pending'");
@@ -1661,7 +1679,103 @@ function handle_admin_delete_signal($db, $input) {
     }
 }
 
+function handle_admin_get_kyc($db) {
+    if (!is_admin()) send_json(['success' => false, 'error' => 'Unauthorized'], 403);
+    $res = $db->query("SELECT k.*, u.name as user_name, u.email as user_email FROM kyc_documents k JOIN users u ON u.id = k.user_id ORDER BY k.created_at DESC");
+    send_json(['success' => true, 'data' => $res->fetch_all(MYSQLI_ASSOC)]);
+}
+
+function handle_admin_approve_kyc($db, $input) {
+    if (!is_admin()) send_json(['success' => false, 'error' => 'Unauthorized'], 403);
+    $id = (int)($input['id'] ?? 0);
+    if (!$id) send_json(['success' => false, 'error' => 'Missing ID'], 400);
+    $db->query("UPDATE kyc_documents SET status = 'approved' WHERE id = $id");
+    send_json(['success' => true, 'message' => 'KYC approved']);
+}
+
+function handle_admin_reject_kyc($db, $input) {
+    if (!is_admin()) send_json(['success' => false, 'error' => 'Unauthorized'], 403);
+    $id = (int)($input['id'] ?? 0);
+    $reason = $db->real_escape_string($input['rejection_reason'] ?? '');
+    if (!$id) send_json(['success' => false, 'error' => 'Missing ID'], 400);
+    $db->query("UPDATE kyc_documents SET status = 'rejected', rejection_reason = '$reason' WHERE id = $id");
+    send_json(['success' => true, 'message' => 'KYC rejected']);
+}
+
+function handle_admin_get_all_transactions($db) {
+    if (!is_admin()) send_json(['success' => false, 'error' => 'Unauthorized'], 403);
+
+    $type     = $db->real_escape_string($_GET['type']     ?? 'all');
+    $status   = $db->real_escape_string($_GET['status']   ?? '');
+    $page     = max(1, (int)($_GET['page']     ?? 1));
+    $per_page = min(100, (int)($_GET['per_page'] ?? 20));
+    $offset   = ($page - 1) * $per_page;
+
+    $deposit_where = "1=1";
+    $txn_where     = "t.type IN ('withdrawal','internal_transfer')";
+
+    if ($status) {
+        $deposit_where .= " AND dr.status = '$status'";
+        $txn_where     .= " AND t.status  = '$status'";
+    }
+
+    $parts = [];
+    if (in_array($type, ['all', 'deposit'])) {
+        $parts[] = "SELECT dr.id, 'deposit' AS type, dr.amount, dr.currency, dr.method, dr.status, dr.created_at, u.name AS user_name, u.email AS user_email
+                    FROM deposit_requests dr JOIN users u ON u.id = dr.user_id WHERE $deposit_where";
+    }
+    if (in_array($type, ['all', 'withdrawal', 'transfer'])) {
+        $parts[] = "SELECT t.id, t.type, t.amount, t.currency, t.method, t.status, t.created_at, u.name AS user_name, u.email AS user_email
+                    FROM transactions t JOIN users u ON u.id = t.user_id WHERE $txn_where";
+    }
+
+    $union_sql = implode(' UNION ALL ', $parts);
+    $count_res = $db->query("SELECT COUNT(*) c FROM ($union_sql) combined");
+    $total     = (int)$count_res->fetch_assoc()['c'];
+
+    $res = $db->query("SELECT * FROM ($union_sql) combined ORDER BY created_at DESC LIMIT $per_page OFFSET $offset");
+
+    send_json([
+        'success' => true,
+        'data'    => $res->fetch_all(MYSQLI_ASSOC),
+        'meta'    => [
+            'page'      => $page,
+            'per_page'  => $per_page,
+            'total'     => $total,
+            'last_page' => (int)ceil($total / $per_page),
+        ],
+    ]);
+}
+
+function handle_get_market_data($db) {
+    // Return simulated market data via API
+    $ticker = [
+        ['pair' => 'EUR/USD', 'price' => '1.08521', 'change' => '+0.42%', 'up' => true],
+        ['pair' => 'GBP/USD', 'price' => '1.27834', 'change' => '-0.18%', 'up' => false],
+        ['pair' => 'XAU/USD', 'price' => '2341.50', 'change' => '+1.02%', 'up' => true],
+        ['pair' => 'USD/JPY', 'price' => '149.230', 'change' => '+0.26%', 'up' => true],
+        ['pair' => 'US500', 'price' => '5248.40', 'change' => '+0.58%', 'up' => true],
+        ['pair' => 'BTC/USD', 'price' => '68450.00', 'change' => '-1.34%', 'up' => false],
+        ['pair' => 'GBP/JPY', 'price' => '190.540', 'change' => '+0.09%', 'up' => true],
+        ['pair' => 'UKOUSD', 'price' => '83.42', 'change' => '-0.45%', 'up' => false],
+        ['pair' => 'AUD/USD', 'price' => '0.65210', 'change' => '+0.31%', 'up' => true],
+        ['pair' => 'NAS100', 'price' => '18320.00', 'change' => '+0.74%', 'up' => true],
+    ];
+    $spreads = [
+        ['pair' => 'EUR/USD', 'category' => 'Forex', 'ours' => '0.0', 'market' => '0.8', 'type' => 'major'],
+        ['pair' => 'XAU/USD', 'category' => 'Gold', 'ours' => '0.75', 'market' => '0.89', 'type' => 'commodity'],
+        ['pair' => 'GBP/USD', 'category' => 'Forex', 'ours' => '0.5', 'market' => '1.2', 'type' => 'major'],
+        ['pair' => 'GBP/CHF', 'category' => 'Forex', 'ours' => '0.90', 'market' => '1.30', 'type' => 'minor'],
+        ['pair' => 'GBP/NZD', 'category' => 'Forex', 'ours' => '2.65', 'market' => '3.31', 'type' => 'minor'],
+        ['pair' => 'HK50', 'category' => 'Indices', 'ours' => '0.41', 'market' => '1.99', 'type' => 'index'],
+        ['pair' => 'US500', 'category' => 'Indices', 'ours' => '0.4', 'market' => '1.2', 'type' => 'index'],
+        ['pair' => 'UKOUSD', 'category' => 'Energy', 'ours' => '2.30', 'market' => '3.34', 'type' => 'energy'],
+    ];
+    send_json(['success' => true, 'data' => ['ticker' => $ticker, 'spreads' => $spreads]]);
+}
+
 function handle_admin_approve_transaction($db, $input) {
+    if (!is_admin()) send_json(['success' => false, 'error' => 'Unauthorized'], 403);
     $txn_id = (int)($input['transaction_id'] ?? 0);
     if (!$txn_id) send_json(['success' => false, 'error' => 'Missing transaction_id.'], 400);
  
@@ -1674,12 +1788,40 @@ function handle_admin_approve_transaction($db, $input) {
     // Mark as completed
     $db->query("UPDATE transactions SET status = 'completed' WHERE id = $txn_id");
  
-    // Credit the user's wallet for deposits
+    // Credit the user's wallet for deposits (if any in transactions table)
     if ($txn['type'] === 'deposit') {
         $uid    = (int)$txn['user_id'];
         $amount = (float)$txn['amount'];
         $db->query("UPDATE users SET wallet_balance = wallet_balance + $amount WHERE id = $uid");
     }
  
-    send_json(['success' => true, 'message' => 'Transaction approved and wallet credited.']);
+    send_json(['success' => true, 'message' => 'Transaction approved.']);
+}
+
+function handle_admin_reject_transaction($db, $input) {
+    if (!is_admin()) send_json(['success' => false, 'error' => 'Unauthorized'], 403);
+    $id = (int)($input['id'] ?? 0);
+    $reason = $db->real_escape_string($input['rejection_reason'] ?? '');
+    if (!$id) send_json(['success' => false, 'error' => 'Missing ID'], 400);
+
+    $res = $db->query("SELECT * FROM transactions WHERE id = $id LIMIT 1");
+    $txn = $res->fetch_assoc();
+    if (!$txn) send_json(['success' => false, 'error' => 'Not found'], 404);
+    if ($txn['status'] !== 'pending') send_json(['success' => false, 'error' => 'Not pending'], 409);
+
+    $db->begin_transaction();
+    try {
+        $db->query("UPDATE transactions SET status = 'rejected', notes = CONCAT(notes, ' | Rejected: $reason') WHERE id = $id");
+        // If it was a withdrawal, return funds to wallet
+        if ($txn['type'] === 'withdrawal') {
+            $amount = (float)$txn['amount'];
+            $uid = (int)$txn['user_id'];
+            $db->query("UPDATE users SET wallet_balance = wallet_balance + $amount WHERE id = $uid");
+        }
+        $db->commit();
+        send_json(['success' => true, 'message' => 'Transaction rejected']);
+    } catch (Exception $e) {
+        $db->rollback();
+        send_json(['success' => false, 'error' => 'Failed to reject transaction'], 500);
+    }
 }

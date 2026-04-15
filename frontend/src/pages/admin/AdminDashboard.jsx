@@ -1,10 +1,19 @@
-import { Users, DollarSign, TrendingUp, Clock, ArrowUpRight, ArrowDownRight } from "lucide-react";
-import { adminStats, adminTransactions, adminUsers, earningsChartData } from "../../data/mockData";
+import { useState, useEffect } from "react";
+import { Users, DollarSign, TrendingUp, Clock, ArrowUpRight, ArrowDownRight, Loader2 } from "lucide-react";
+import { adminService } from "../../services/api";
 import { Badge } from "../../components/ui";
 import {
   ResponsiveContainer, AreaChart, Area, BarChart, Bar,
   XAxis, YAxis, Tooltip, CartesianGrid,
 } from "recharts";
+const earningsChartData = [
+  { month: "Apr", value: 18200 },
+  { month: "May", value: 19800 },
+  { month: "Jun", value: 17400 },
+  { month: "Jul", value: 22100 },
+  { month: "Aug", value: 21000 },
+  { month: "Sep", value: 25324 },
+];
 
 const weekData = [
   { day: "Mon", deposits: 42000, withdrawals: 12000 },
@@ -16,51 +25,78 @@ const weekData = [
   { day: "Sun", deposits: 19000, withdrawals: 5000 },
 ];
 
-const statCards = [
-  {
-    label: "Total Users",
-    value: adminStats.totalUsers.toLocaleString(),
-    sub: "+124 this week",
-    up: true,
-    icon: Users,
-    color: "text-teal",
-    bg: "bg-teal/10",
-  },
-  {
-    label: "Total Deposits",
-    value: adminStats.totalDeposits,
-    sub: "+$186,400 today",
-    up: true,
-    icon: DollarSign,
-    color: "text-accent",
-    bg: "bg-accent/10",
-  },
-  {
-    label: "Monthly Volume",
-    value: adminStats.monthlyVolume,
-    sub: "+8.3% vs last month",
-    up: true,
-    icon: TrendingUp,
-    color: "text-primary",
-    bg: "bg-primary/10",
-  },
-  {
-    label: "Pending Withdrawals",
-    value: adminStats.pendingWithdrawals,
-    sub: "Require approval",
-    up: false,
-    icon: Clock,
-    color: "text-amber-500",
-    bg: "bg-amber-50",
-  },
-];
-
 function statusVariant(status) {
-  const map = { Active: "success", Pending: "warning", Suspended: "danger", Processing: "warning", Completed: "success", Rejected: "danger" };
-  return map[status] || "neutral";
+  const map = { Active: "success", Pending: "warning", Suspended: "danger", Processing: "warning", Completed: "success", Rejected: "danger", approved: "success", rejected: "danger", deposit: "success", withdrawal: "danger" };
+  return map[status?.toLowerCase()] || "neutral";
 }
 
 export default function AdminDashboard() {
+  const [stats, setStats] = useState(null);
+  const [users, setUsers] = useState([]);
+  const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [sRes, uRes, tRes] = await Promise.all([
+          adminService.getDashboardStats(),
+          adminService.getUsers(1, 4),
+          adminService.getAllTransactions({ page: 1, per_page: 5 })
+        ]);
+        setStats(sRes.data);
+        setUsers(uRes.data);
+        setTransactions(tRes.data);
+      } catch (err) {
+        console.error("Dashboard fetch error:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  if (loading) return <div className="flex justify-center py-20"><Loader2 className="w-10 h-10 animate-spin text-accent" /></div>;
+
+  const statCards = [
+    {
+      label: "Total Users",
+      value: stats?.total_users?.toLocaleString() || "0",
+      sub: "Active Traders",
+      up: true,
+      icon: Users,
+      color: "text-teal",
+      bg: "bg-teal/10",
+    },
+    {
+      label: "Total Deposits",
+      value: `$${(stats?.total_deposits || 0).toLocaleString()}`,
+      sub: "Approved",
+      up: true,
+      icon: DollarSign,
+      color: "text-accent",
+      bg: "bg-accent/10",
+    },
+    {
+      label: "Open Positions",
+      value: stats?.open_positions || "0",
+      sub: "Live trades",
+      up: true,
+      icon: TrendingUp,
+      color: "text-primary",
+      bg: "bg-primary/10",
+    },
+    {
+      label: "Pending Trans.",
+      value: stats?.pending_transactions || "0",
+      sub: "Require approval",
+      up: false,
+      icon: Clock,
+      color: "text-amber-500",
+      bg: "bg-amber-50",
+    },
+  ];
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -141,11 +177,11 @@ export default function AdminDashboard() {
           </ResponsiveContainer>
           <div className="mt-4 pt-4 border-t border-surface-border grid grid-cols-2 gap-4">
             <div>
-              <div className="font-display font-bold text-xl text-primary">{adminStats.totalUsers.toLocaleString()}</div>
+              <div className="font-display font-bold text-xl text-primary">{stats?.total_users?.toLocaleString() || "0"}</div>
               <div className="text-xs text-[#8897A9]">Total Users</div>
             </div>
             <div>
-              <div className="font-display font-bold text-xl text-teal">{adminStats.activeTraders.toLocaleString()}</div>
+              <div className="font-display font-bold text-xl text-teal">{stats?.active_users?.toLocaleString() || "0"}</div>
               <div className="text-xs text-[#8897A9]">Active Traders</div>
             </div>
           </div>
@@ -161,14 +197,14 @@ export default function AdminDashboard() {
             <a href="/admin/users" className="text-xs font-semibold text-accent hover:underline">View all</a>
           </div>
           <div className="divide-y divide-surface-border">
-            {adminUsers.slice(0, 4).map((u) => (
+            {users.map((u) => (
               <div key={u.id} className="flex items-center gap-4 px-6 py-3.5 hover:bg-surface transition-colors">
                 <div className="w-8 h-8 rounded-full bg-accent/10 text-accent font-bold text-sm flex items-center justify-center flex-shrink-0">
                   {u.name[0]}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-semibold text-primary truncate">{u.name}</div>
-                  <div className="text-xs text-[#8897A9] truncate">{u.country} — {u.account}</div>
+                  <div className="text-xs text-[#8897A9] truncate">{u.country} — {u.role}</div>
                 </div>
                 <Badge variant={statusVariant(u.status)}>{u.status}</Badge>
               </div>
@@ -183,17 +219,17 @@ export default function AdminDashboard() {
             <a href="/admin/transactions" className="text-xs font-semibold text-accent hover:underline">View all</a>
           </div>
           <div className="divide-y divide-surface-border">
-            {adminTransactions.map((tx) => (
+            {transactions.map((tx) => (
               <div key={tx.id} className="flex items-center gap-4 px-6 py-3.5 hover:bg-surface transition-colors">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${tx.type === "Deposit" ? "bg-teal/10" : "bg-accent/10"}`}>
-                  <div className={`w-2.5 h-2.5 rounded-sm ${tx.type === "Deposit" ? "bg-teal" : "bg-accent"}`} />
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${tx.type === "deposit" ? "bg-teal/10" : "bg-accent/10"}`}>
+                  <div className={`w-2.5 h-2.5 rounded-sm ${tx.type === "deposit" ? "bg-teal" : "bg-accent"}`} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-semibold text-primary truncate">{tx.user}</div>
+                  <div className="text-sm font-semibold text-primary truncate">{tx.user_name}</div>
                   <div className="text-xs text-[#8897A9]">{tx.type} — {tx.method}</div>
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <div className={`text-sm font-bold ${tx.type === "Deposit" ? "text-teal" : "text-accent"}`}>{tx.amount}</div>
+                  <div className={`text-sm font-bold ${tx.type === "deposit" ? "text-teal" : "text-accent"}`}>${parseFloat(tx.amount).toLocaleString()}</div>
                   <Badge variant={statusVariant(tx.status)}>{tx.status}</Badge>
                 </div>
               </div>

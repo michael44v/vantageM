@@ -9,7 +9,7 @@
  *       then the secure_url is POSTed to ?action=upload_kyc via FormData.
  */
 
-const BASE_URL = "https://vantagemarketts.com/backend/";
+const BASE_URL = "/api/index.php";
 
 // ── Cloudinary config (from .env) ─────────────────────────────────────────────
 const CLOUDINARY_CLOUD_NAME    = "dguvkirdr";
@@ -73,7 +73,7 @@ export const mailService = {
 
 
 async function req(action, { method = "GET", body = null, params = {} } = {}) {
-  const url = new URL(BASE_URL);
+  const url = new URL(BASE_URL, window.location.origin);
   url.searchParams.set("action", action);
   Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, String(v)));
 
@@ -457,12 +457,26 @@ export const adminService = {
       body: { transaction_id: id },
     }),
 
+  rejectTransaction: (id, reason) =>
+    req("admin_reject_transaction", {
+      method: "POST",
+      body: { id, rejection_reason: reason },
+    }),
+
   updateUser: (user) => req("admin_update_user", { method: "POST", body: user }),
   deleteUser: (id) => req("admin_delete_user", { method: "POST", body: { id } }),
 
   getSignals: () => req("admin_get_signals"),
   upsertSignal: (signal) => req("admin_upsert_signal", { method: "POST", body: signal }),
   deleteSignal: (id) => req("admin_delete_signal", { method: "POST", body: { id } }),
+
+  getKYCRequests: () => req("admin_get_kyc"),
+  approveKYC: (id) => req("admin_approve_kyc", { method: "POST", body: { id } }),
+  rejectKYC: (id, reason) => req("admin_reject_kyc", { method: "POST", body: { id, rejection_reason: reason } }),
+
+  getAllTransactions: (params = {}) => req("admin_get_all_transactions", { params }),
+
+  getMarketData: () => req("get_market_data"),
 
   getSettings: () => req("admin_get_settings"),
   updateSettings: (settings) => req("admin_update_settings", { method: "POST", body: settings }),

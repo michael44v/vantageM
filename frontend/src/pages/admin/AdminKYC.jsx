@@ -1,12 +1,48 @@
-import { useState } from "react";
-import { CheckCircle, XCircle, Eye, Shield, FileText, ExternalLink } from "lucide-react";
+import { useState, useEffect } from "react";
+import { CheckCircle, XCircle, Eye, Shield, FileText, ExternalLink, Loader2 } from "lucide-react";
+import { adminService } from "../../services/api";
 
 export default function AdminKYC() {
-  const kycRequests = [
-    { id: 1, user: "James Okonkwo", type: "Identity", doc: "Passport_Scan.jpg", date: "2024-04-05", status: "Pending" },
-    { id: 2, user: "Sarah Kimani", type: "Address", doc: "Utility_Bill.pdf", date: "2024-04-06", status: "Pending" },
-    { id: 3, user: "Mikael Johansson", type: "Identity", doc: "ID_Card.png", date: "2024-04-04", status: "Approved" },
-  ];
+  const [kycRequests, setKycRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchKYC();
+  }, []);
+
+  const fetchKYC = async () => {
+    setLoading(true);
+    try {
+      const res = await adminService.getKYCRequests();
+      setKycRequests(res.data || []);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const approve = async (id) => {
+    try {
+      await adminService.approveKYC(id);
+      fetchKYC();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const reject = async (id) => {
+    const reason = window.prompt("Rejection reason:");
+    if (reason === null) return;
+    try {
+      await adminService.rejectKYC(id, reason);
+      fetchKYC();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  if (loading) return <div className="flex justify-center py-20"><Loader2 className="w-10 h-10 animate-spin text-accent" /></div>;
 
   return (
     <div className="space-y-6">
@@ -30,21 +66,21 @@ export default function AdminKYC() {
             {kycRequests.map((req) => (
               <tr key={req.id} className="hover:bg-[#F8F8F8]/50 transition-colors group">
                 <td className="px-6 py-5">
-                  <div className="font-bold text-[#111111] text-sm">{req.user}</div>
-                  <div className="text-xs text-[#8897A9] mt-0.5 font-medium uppercase tracking-tighter">USER-ID: {req.id + 100}</div>
+                  <div className="font-bold text-[#111111] text-sm">{req.user_name}</div>
+                  <div className="text-xs text-[#8897A9] mt-0.5 font-medium uppercase tracking-tighter">USER-ID: {req.user_id}</div>
                 </td>
                 <td className="px-6 py-5">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-full bg-[#FFC800]/10 flex items-center justify-center text-[#CCA000]">
                       <FileText className="w-4 h-4" />
                     </div>
-                    <span className="font-bold text-[#111111]">{req.type}</span>
+                    <span className="font-bold text-[#111111]">{req.document_type}</span>
                   </div>
                 </td>
-                <td className="px-6 py-5 text-[#4A5568] font-medium">{req.date}</td>
+                <td className="px-6 py-5 text-[#4A5568] font-medium">{new Date(req.created_at).toLocaleDateString()}</td>
                 <td className="px-6 py-5">
                    <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border ${
-                     req.status === 'Approved'
+                     req.status?.toLowerCase() === 'approved'
                       ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
                       : 'bg-amber-50 text-amber-700 border-amber-100'
                    }`}>
@@ -53,15 +89,15 @@ export default function AdminKYC() {
                 </td>
                 <td className="px-6 py-5">
                   <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button className="p-2 rounded-lg text-[#8897A9] hover:bg-[#F8F8F8] hover:text-[#111111] transition-all" title="View Document">
+                    <a href={req.file_url} target="_blank" rel="noreferrer" className="p-2 rounded-lg text-[#8897A9] hover:bg-[#F8F8F8] hover:text-[#111111] transition-all" title="View Document">
                       <Eye className="w-4 h-4" />
-                    </button>
-                    {req.status === 'Pending' && (
+                    </a>
+                    {req.status?.toLowerCase() === 'pending' && (
                       <>
-                        <button className="p-2 rounded-lg text-emerald-600 hover:bg-emerald-50 transition-all" title="Approve">
+                        <button onClick={() => approve(req.id)} className="p-2 rounded-lg text-emerald-600 hover:bg-emerald-50 transition-all" title="Approve">
                           <CheckCircle className="w-4 h-4" />
                         </button>
-                        <button className="p-2 rounded-lg text-red-500 hover:bg-red-50 transition-all" title="Reject">
+                        <button onClick={() => reject(req.id)} className="p-2 rounded-lg text-red-500 hover:bg-red-50 transition-all" title="Reject">
                           <XCircle className="w-4 h-4" />
                         </button>
                       </>

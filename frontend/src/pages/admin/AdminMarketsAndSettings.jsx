@@ -1,10 +1,21 @@
 import { useState, useEffect } from "react";
-import { spreadsData, tickerData } from "../../data/mockData";
 import { Badge } from "../../components/ui";
 import { adminService } from "../../services/api";
 import { Loader2, Save, CheckCircle } from "lucide-react";
 
 export function AdminMarkets() {
+  const [data, setData] = useState({ ticker: [], spreads: [] });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    adminService.getMarketData().then(res => {
+      setData(res.data);
+      setLoading(false);
+    });
+  }, []);
+
+  if (loading) return <div className="flex justify-center py-20"><Loader2 className="w-10 h-10 animate-spin text-accent" /></div>;
+
   return (
     <div className="space-y-6">
       <div>
@@ -28,7 +39,7 @@ export function AdminMarkets() {
               </tr>
             </thead>
             <tbody className="divide-y divide-surface-border">
-              {tickerData.map((t) => (
+              {data.ticker.map((t) => (
                 <tr key={t.pair} className="hover:bg-surface/50 transition-colors">
                   <td className="px-5 py-3.5 font-bold text-primary">{t.pair}</td>
                   <td className="px-5 py-3.5 font-mono font-semibold text-primary">{t.price}</td>
@@ -57,7 +68,7 @@ export function AdminMarkets() {
               </tr>
             </thead>
             <tbody className="divide-y divide-surface-border">
-              {spreadsData.map((row) => (
+              {data.spreads.map((row) => (
                 <tr key={row.pair} className="hover:bg-surface/50 transition-colors">
                   <td className="px-5 py-3.5 font-bold text-primary">{row.pair}</td>
                   <td className="px-5 py-3.5 text-[#4A5568]">{row.category}</td>
