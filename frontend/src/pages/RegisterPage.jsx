@@ -204,10 +204,10 @@ const handleSubmit = async (e) => {
             {step === 1 && (
               <div className="space-y-5">
                 <div className="grid grid-cols-2 gap-4">
-                  <Input label="First Name" placeholder="James"
+                  <Input label="First Name" placeholder="John"
                     value={form.firstName} error={errors.firstName}
                     onChange={(e) => update("firstName", e.target.value)} />
-                  <Input label="Last Name" placeholder="Okonkwo"
+                  <Input label="Last Name" placeholder="Doe"
                     value={form.lastName} error={errors.lastName}
                     onChange={(e) => update("lastName", e.target.value)} />
                 </div>

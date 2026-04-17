@@ -49,7 +49,7 @@ export default function Navbar() {
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2.5 flex-shrink-0">
              <img src={siteLogo} alt="Logo" style={{height:"32px", objectFit: "contain"}}/>
-            <span className="font-display font-extrabold text-xl text-primary">{siteName}</span>
+          
           </Link>
 
           {/* Desktop nav */}
