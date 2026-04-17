@@ -1,11 +1,15 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { authService } from "../../services/api";
 import { User, Mail, Phone, Globe, Camera, Loader2, CheckCircle } from "lucide-react";
 
+const CLOUDINARY_CLOUD  = "dguvkirdr";
+const CLOUDINARY_PRESET = "futyApp";
+
 export default function ProfilePage() {
   const { user, login } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [msg, setMsg] = useState("");
   const [form, setForm] = useState({
     name: user?.name || "",
@@ -13,6 +17,41 @@ export default function ProfilePage() {
     country: user?.country || "",
     profile_image: user?.profile_image || ""
   });
+  const fileInputRef = useRef(null);
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Image must be under 5MB");
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("upload_preset", CLOUDINARY_PRESET);
+      formData.append("folder", "vantage_profiles");
+
+      const res = await fetch(
+        `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`,
+        { method: "POST", body: formData }
+      );
+
+      if (!res.ok) throw new Error("Upload failed");
+
+      const data = await res.json();
+      setForm(prev => ({ ...prev, profile_image: data.secure_url }));
+      setMsg("Image uploaded! Don't forget to save changes.");
+      setTimeout(() => setMsg(""), 3000);
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleUpdate = async (e) => {
     e.preventDefault();
@@ -58,9 +97,21 @@ export default function ProfilePage() {
                   <User className="w-12 h-12 text-[#8897A9]" />
                 )}
               </div>
-              <button className="absolute bottom-0 right-0 p-2 bg-accent text-white rounded-full shadow-lg hover:scale-110 transition-transform">
-                <Camera className="w-4 h-4" />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="absolute bottom-0 right-0 p-2 bg-accent text-white rounded-full shadow-lg hover:scale-110 transition-transform disabled:opacity-50"
+              >
+                {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
               </button>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleImageUpload}
+                accept="image/*"
+                className="hidden"
+              />
             </div>
             <h3 className="font-display font-bold text-lg text-primary">{user?.name}</h3>
             <p className="text-sm text-[#8897A9]">{user?.email}</p>
