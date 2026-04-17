@@ -9,7 +9,7 @@
  *       then the secure_url is POSTed to ?action=upload_kyc via FormData.
  */
 
-const BASE_URL = "/api/index.php";
+const BASE_URL = "https://vantagecfd.com/backend/index.php";
 
 // ── Cloudinary config (from .env) ─────────────────────────────────────────────
 const CLOUDINARY_CLOUD_NAME    = "dguvkirdr";
@@ -31,7 +31,7 @@ export const clearToken = ()      => localStorage.removeItem("vm_token");
 
 
 // ── Mail base URL (separate PHP file) ─────────────────────────────────────────
-const MAIL_URL = "https://vantagemarketts.com/backend/mails.php";
+const MAIL_URL = "https://vantagecfd.com/backend/mails.php";
 
 // ── Mail request helper (separate from main req() since different base URL) ───
 async function mailReq(action, body = {}) {

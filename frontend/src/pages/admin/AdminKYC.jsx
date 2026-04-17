@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { CheckCircle, XCircle, Eye, Shield, FileText, ExternalLink, Loader2 } from "lucide-react";
+import { CheckCircle, XCircle, Eye, Shield, FileText, ExternalLink, Loader2, Calendar, User } from "lucide-react";
 import { adminService } from "../../services/api";
 
 export default function AdminKYC() {
@@ -45,13 +45,14 @@ export default function AdminKYC() {
   if (loading) return <div className="flex justify-center py-20"><Loader2 className="w-10 h-10 animate-spin text-accent" /></div>;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 px-4 md:px-0">
       <div>
         <h1 className="font-display font-extrabold text-2xl text-[#111111]">KYC Approvals</h1>
         <p className="text-sm text-[#4A5568] mt-1">Review and approve trader identity and address documents.</p>
       </div>
 
-      <div className="bg-white border border-[#E0E0E0] rounded-xl shadow-card overflow-hidden">
+      {/* --- DESKTOP TABLE VIEW (Hidden on Mobile) --- */}
+      <div className="hidden md:block bg-white border border-[#E0E0E0] rounded-xl shadow-card overflow-hidden">
         <table className="w-full text-left text-sm">
           <thead className="bg-[#F8F8F8] border-b border-[#E0E0E0]">
             <tr>
@@ -108,6 +109,74 @@ export default function AdminKYC() {
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* --- MOBILE LIST VIEW (Visible only on Mobile) --- */}
+      <div className="md:hidden space-y-4">
+        {kycRequests.map((req) => (
+          <div key={req.id} className="bg-white border border-[#E0E0E0] rounded-xl p-5 shadow-sm space-y-4">
+            {/* Header: Name & Status */}
+            <div className="flex justify-between items-start">
+              <div>
+                <div className="font-bold text-[#111111] text-base">{req.user_name}</div>
+                <div className="text-[10px] text-[#8897A9] font-medium uppercase tracking-tighter">ID: {req.user_id}</div>
+              </div>
+              <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-widest border ${
+                req.status?.toLowerCase() === 'approved'
+                 ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                 : 'bg-amber-50 text-amber-700 border-amber-100'
+              }`}>
+                 {req.status}
+              </span>
+            </div>
+
+            {/* Content: Doc Type & Date */}
+            <div className="grid grid-cols-2 gap-4 py-3 border-y border-[#F0F0F0]">
+              <div className="space-y-1">
+                <span className="text-[10px] uppercase text-[#666666] font-bold tracking-widest">Document</span>
+                <div className="flex items-center gap-2 text-[#111111] font-bold text-xs">
+                   <FileText className="w-3.5 h-3.5 text-[#CCA000]" />
+                   {req.document_type}
+                </div>
+              </div>
+              <div className="space-y-1">
+                <span className="text-[10px] uppercase text-[#666666] font-bold tracking-widest">Submitted</span>
+                <div className="flex items-center gap-2 text-[#4A5568] font-medium text-xs">
+                   <Calendar className="w-3.5 h-3.5" />
+                   {new Date(req.created_at).toLocaleDateString()}
+                </div>
+              </div>
+            </div>
+
+            {/* Actions: Large buttons for mobile tapping */}
+            <div className="flex gap-2 pt-1">
+              <a 
+                href={req.file_url} 
+                target="_blank" 
+                rel="noreferrer" 
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-[#F8F8F8] text-[#111111] rounded-lg text-xs font-bold border border-[#E0E0E0]"
+              >
+                <Eye className="w-4 h-4" /> View
+              </a>
+              {req.status?.toLowerCase() === 'pending' && (
+                <>
+                  <button 
+                    onClick={() => approve(req.id)} 
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-bold border border-emerald-100"
+                  >
+                    <CheckCircle className="w-4 h-4" /> Approve
+                  </button>
+                  <button 
+                    onClick={() => reject(req.id)} 
+                    className="p-2.5 bg-red-50 text-red-500 rounded-lg border border-red-100"
+                  >
+                    <XCircle className="w-4 h-4" />
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

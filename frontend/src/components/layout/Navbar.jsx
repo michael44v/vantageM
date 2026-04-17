@@ -16,7 +16,7 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [siteName, setSiteName] = useState("vāntãgeCFD");
-  const [siteLogo, setSiteLogo] = useState("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQXEXUBiCFf2GdsMcVX_Mk0PC_VOunqPDKjahyDEIp2_-QI7n0StED0DglG9A&s");
+  const [siteLogo, setSiteLogo] = useState("https://www.vantagemarkets.com/wp-content/themes/vantage/images/logo.svg");
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
