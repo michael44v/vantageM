@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { notificationService } from "../../services/api";
 import { Bell, Check, Loader2, Info, AlertCircle, CheckCircle2, ShieldAlert } from "lucide-react";
-import { format } from "date-fns";
+//import { format } from "date-fns";
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState([]);
@@ -92,7 +92,7 @@ export default function NotificationsPage() {
                     {n.title}
                   </h4>
                   <span className="text-[10px] font-medium text-[#8897A9] whitespace-nowrap ml-2">
-                    {format(new Date(n.created_at), 'MMM d, h:mm a')}
+                    {(new Date(n.created_at), 'MMM d, h:mm a')}
                   </span>
                 </div>
                 <p className="text-sm text-[#4A5568] leading-relaxed">

@@ -121,8 +121,8 @@ export default function DashboardLayout() {
 
           <div className="flex items-center gap-4">
             <div className="hidden md:flex flex-col items-end mr-2">
-              <span className="text-[10px] uppercase tracking-widest text-[#8897A9] font-bold">Wallet Balance</span>
-              <span className="text-sm font-bold text-primary">$1,000.00 USD</span>
+              <span className="text-[10px] uppercase tracking-widest text-[#8897A9] font-bold">User Wallet </span>
+             
             </div>
             <Link to="/dashboard/notifications" className="relative text-[#4A5568] hover:text-primary transition-colors">
               <Bell className="w-5 h-5" />

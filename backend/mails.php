@@ -63,15 +63,15 @@ $plain = "Hi $firstName,\n\n$bodyText\n\n$ctaUrl\n\nvāntãgeCFD Team";
 try {
     $mail = new PHPMailer(true);
     $mail->isSMTP();
-    $mail->Host       = 'mail.vantageCFD.com';
+    $mail->Host       = 'smtp.hostinger.com';
     $mail->SMTPAuth   = true;
-    $mail->Username   = 'noreply@vantageCFD.com';
-    $mail->Password   = 'victor47009A?';
-    $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-    $mail->Port       = 587;
+    $mail->Username   = 'support@vantagecfd.com';
+    $mail->Password   = 'Admin@vantagecfd.1';
+    $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+    $mail->Port       = 465;
     $mail->CharSet    = 'UTF-8';
 
-    $mail->setFrom('noreply@vantageCFD.com', 'vāntãgeCFD');
+    $mail->setFrom('support@vantagecfd.com', 'Vantage Markets');
     $mail->addAddress($email, $fullName);
 
     $mail->isHTML(true);
