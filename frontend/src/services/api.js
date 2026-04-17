@@ -150,6 +150,10 @@ resendVerification: (userId) =>
 
   logout: () => clearToken(),
 
+  updateProfile: (data) => req("update_profile", { method: "POST", body: data }),
+
+  adminResetPassword: (password) => req("admin_reset_password", { method: "POST", body: { password } }),
+
   requestPasswordReset: (email) =>
     req("forgot_password", { method: "POST", body: { email } }),
 
@@ -490,4 +494,10 @@ export const adminService = {
 
 export const siteService = {
   getSettings: () => req("get_site_settings"),
+};
+
+// ── Notifications ─────────────────────────────────────────────────────────────
+export const notificationService = {
+  getNotifications: () => req("get_notifications"),
+  markRead: () => req("mark_notifications_read", { method: "POST" }),
 };

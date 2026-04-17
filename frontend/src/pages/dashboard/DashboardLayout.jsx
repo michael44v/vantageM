@@ -13,7 +13,8 @@ const navItems = [
   { label: "Funds", path: "/dashboard/funds", icon: CreditCard },
   { label: "Internal Transfer", path: "/dashboard/transfer", icon: ArrowLeftRight },
   { label: "Copy Trading", path: "/dashboard/copy", icon: Users },
-  { label: "KYC / Profile", path: "/dashboard/kyc", icon: ShieldCheck },
+  { label: "KYC Status", path: "/dashboard/kyc", icon: ShieldCheck },
+  { label: "Profile Settings", path: "/dashboard/profile", icon: User },
   { label: "Transactions", path: "/dashboard/transactions", icon: Receipt },
 ];
 
@@ -123,10 +124,10 @@ export default function DashboardLayout() {
               <span className="text-[10px] uppercase tracking-widest text-[#8897A9] font-bold">Wallet Balance</span>
               <span className="text-sm font-bold text-primary">$1,000.00 USD</span>
             </div>
-            <button className="relative text-[#4A5568] hover:text-primary transition-colors">
+            <Link to="/dashboard/notifications" className="relative text-[#4A5568] hover:text-primary transition-colors">
               <Bell className="w-5 h-5" />
               <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-accent rounded-full" />
-            </button>
+            </Link>
              <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center font-bold text-sm text-white">
                 {user?.name?.[0] || "U"}
               </div>

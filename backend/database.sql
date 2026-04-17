@@ -367,6 +367,7 @@ CREATE TABLE `users` (
   `email` varchar(180) COLLATE utf8mb4_unicode_ci NOT NULL,
   `password_hash` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `phone` varchar(30) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `profile_image` varchar(512) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `country` varchar(80) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `wallet_balance` decimal(18,2) NOT NULL DEFAULT '0.00',
   `role` enum('trader','admin') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'trader',
@@ -666,7 +667,30 @@ INSERT INTO `settings` (`key`, `value`) VALUES
 ('site_name', 'vāntãgeCFD'),
 ('support_email', 'support@vantageCFD.com'),
 ('min_deposit', '50'),
+('max_deposit', '1000000'),
 ('default_currency', 'USD'),
 ('copy_trading_enabled', '1'),
-('registration_open', '1');
-('site_logo', 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQXEXUBiCFf2GdsMcVX_Mk0PC_VOunqPDKjahyDEIp2_-QI7n0StED0DglG9A&s'),
+('registration_open', '1'),
+('site_logo', 'https://www.vantagemarkets.com/wp-content/themes/vantage/images/logo.svg'),
+('wallet_btc', ''),
+('wallet_eth', ''),
+('wallet_usdt', '');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `notifications`
+--
+
+CREATE TABLE `notifications` (
+  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
+  `user_id` bigint UNSIGNED NOT NULL,
+  `title` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `message` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `type` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'info',
+  `is_read` tinyint(1) NOT NULL DEFAULT '0',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_notifications_user` (`user_id`),
+  CONSTRAINT `fk_notifications_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
