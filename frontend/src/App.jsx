@@ -38,6 +38,8 @@ import CopyTradingPage from "./pages/dashboard/CopyTradingPage";
 import TerminalPage from "./pages/TerminalPage";
 import TransactionsPage from "./pages/dashboard/TransactionsPage";
 import VerifyEmailPage from "./pages/VerifyEmailPage";
+import ProfilePage from "./pages/dashboard/ProfilePage";
+import NotificationsPage from "./pages/dashboard/NotificationsPage";
 
 
 export default function App() {
@@ -77,6 +79,8 @@ export default function App() {
             <Route path="transfer" element={<InternalTransfer />} />
             <Route path="kyc" element={<KYCSection />} />
             <Route path="copy" element={<CopyTradingPage />} />
+            <Route path="profile" element={<ProfilePage />} />
+            <Route path="notifications" element={<NotificationsPage />} />
           </Route>
           <Route path="/admin" element={<RequireAdmin><AdminLayout /></RequireAdmin>}>
             <Route index element={<AdminDashboard />} />

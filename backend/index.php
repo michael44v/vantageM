@@ -83,8 +83,20 @@ case 'admin_approve_transaction':
     handle_get_transactions($db);
     break;
     case 'get_trade_history':
-    handle_get_trade_history($db);
-    break;
+        handle_get_trade_history($db);
+        break;
+    case 'get_notifications':
+        handle_get_notifications($db);
+        break;
+    case 'mark_notifications_read':
+        handle_mark_notifications_read($db);
+        break;
+    case 'update_profile':
+        handle_update_profile($db, $input);
+        break;
+    case 'admin_reset_password':
+        handle_admin_reset_password($db, $input);
+        break;
     case 'login':
         handle_login($db, $input);
         break;
@@ -503,8 +515,16 @@ function handle_submit_deposit($db, $input) {
     $tx_ref        = $db->real_escape_string($input['tx_ref']        ?? '');
     $receipt_url   = $db->real_escape_string($input['receipt_url']   ?? '');
 
-    if ($amount < 100)     send_json(['success' => false, 'error' => 'Minimum deposit is $100.'],       400);
-    if ($amount > 500000000)  send_json(['success' => false, 'error' => 'Maximum deposit is $15,000,000.'],   400);
+    // Fetch min/max from settings
+    $settings_res = $db->query("SELECT `key`, `value` FROM settings WHERE `key` IN ('min_deposit', 'max_deposit')");
+    $sets = [];
+    while($srow = $settings_res->fetch_assoc()) $sets[$srow['key']] = $srow['value'];
+
+    $min_dep = (float)($sets['min_deposit'] ?? 100);
+    $max_dep = (float)($sets['max_deposit'] ?? 15000000);
+
+    if ($amount < $min_dep)     send_json(['success' => false, 'error' => "Minimum deposit is \$$min_dep."],       400);
+    if ($amount > $max_dep)     send_json(['success' => false, 'error' => "Maximum deposit is \$$max_dep."],   400);
     if (empty($tx_ref))   send_json(['success' => false, 'error' => 'Transaction reference required.'], 400);
     if (empty($receipt_url)) send_json(['success' => false, 'error' => 'Receipt URL required.'],      400);
 
@@ -638,6 +658,7 @@ function handle_admin_approve_deposit($db, $input) {
     try {
         $db->query("UPDATE deposit_requests SET status = 'approved' WHERE id = $deposit_id");
         $db->query("UPDATE users SET wallet_balance = wallet_balance + $amount WHERE id = $uid");
+        create_notification($db, $uid, 'Deposit Approved', "Your deposit of \$$amount has been approved and credited to your wallet.", 'success');
         $db->commit();
     } catch (Exception $e) {
         $db->rollback();
@@ -660,6 +681,7 @@ function handle_admin_reject_deposit($db, $input) {
     if ($dep['status'] !== 'pending') send_json(['success' => false, 'error' => 'Already processed.'], 409);
 
     $db->query("UPDATE deposit_requests SET status = 'rejected', admin_note = '$note' WHERE id = $deposit_id");
+    create_notification($db, $dep['user_id'], 'Deposit Rejected', "Your deposit request has been rejected. Note: $note", 'error');
 
     send_json(['success' => true, 'message' => 'Deposit rejected.']);
 }
@@ -1134,12 +1156,33 @@ function handle_forgot_password($db, $input) {
 
     $db->query("INSERT INTO password_resets (user_id, token_hash, expires_at) VALUES ($user_id, '$token_hash', '$expires')");
 
-    // In a real app, send email here. For now, we return it for the demo/frontend to use.
+    // Send actual email
+    $first = explode(' ', $user['name'])[0];
+    _call_password_reset_mailer($email, $first, $token);
+
     send_json([
         'success' => true,
-        'message' => 'Reset link generated (Demo mode).',
-        'debug_token' => $token
+        'message' => 'If this email is registered, you will receive a reset link.'
     ]);
+}
+
+function _call_password_reset_mailer(string $email, string $firstName, string $token): void {
+    $payload = json_encode([
+        'first_name'   => $firstName,
+        'email'        => $email,
+        'reset_token'  => $token,
+        'type'         => 'password_reset'
+    ]);
+    $ch = curl_init('https://vantagecfd.com/backend/mails.php?action=send_mail');
+    curl_setopt_array($ch, [
+        CURLOPT_POST           => true,
+        CURLOPT_POSTFIELDS     => $payload,
+        CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT        => 8,
+    ]);
+    curl_exec($ch);
+    curl_close($ch);
 }
 
 function handle_reset_password($db, $input) {
@@ -1172,6 +1215,70 @@ function handle_reset_password($db, $input) {
     }
 }
 
+function create_notification($db, $user_id, $title, $message, $type = 'info') {
+    $user_id = (int)$user_id;
+    $title = $db->real_escape_string($title);
+    $message = $db->real_escape_string($message);
+    $type = $db->real_escape_string($type);
+    $db->query("INSERT INTO notifications (user_id, title, message, type) VALUES ($user_id, '$title', '$message', '$type')");
+}
+
+function handle_get_notifications($db) {
+    $user_id = get_auth_user_id();
+    if (!$user_id) send_json(['success' => false, 'error' => 'Unauthorized'], 401);
+
+    $res = $db->query("SELECT * FROM notifications WHERE user_id = $user_id ORDER BY created_at DESC LIMIT 50");
+    send_json(['success' => true, 'data' => $res->fetch_all(MYSQLI_ASSOC)]);
+}
+
+function handle_mark_notifications_read($db) {
+    $user_id = get_auth_user_id();
+    if (!$user_id) send_json(['success' => false, 'error' => 'Unauthorized'], 401);
+
+    $db->query("UPDATE notifications SET is_read = 1 WHERE user_id = $user_id");
+    send_json(['success' => true, 'message' => 'Notifications marked as read']);
+}
+
+function handle_update_profile($db, $input) {
+    $user_id = get_auth_user_id();
+    if (!$user_id) send_json(['success' => false, 'error' => 'Unauthorized'], 401);
+
+    $name = $db->real_escape_string($input['name'] ?? '');
+    $phone = $db->real_escape_string($input['phone'] ?? '');
+    $country = $db->real_escape_string($input['country'] ?? '');
+    $profile_image = $db->real_escape_string($input['profile_image'] ?? '');
+
+    $sql = "UPDATE users SET name = '$name', phone = '$phone', country = '$country'";
+    if (!empty($profile_image)) {
+        $sql .= ", profile_image = '$profile_image'";
+    }
+    $sql .= " WHERE id = $user_id";
+
+    if ($db->query($sql)) {
+        create_notification($db, $user_id, 'Profile Updated', 'Your profile details have been successfully updated.');
+        send_json(['success' => true, 'message' => 'Profile updated successfully']);
+    }
+    send_json(['success' => false, 'error' => $db->error], 500);
+}
+
+function handle_admin_reset_password($db, $input) {
+    if (!is_admin()) send_json(['success' => false, 'error' => 'Unauthorized'], 403);
+
+    $user_id = get_auth_user_id();
+    $new_pass = $input['password'] ?? '';
+
+    if (empty($new_pass) || strlen($new_pass) < 8) {
+        send_json(['success' => false, 'error' => 'Password must be at least 8 characters.'], 400);
+    }
+
+    $hash = password_hash($new_pass, PASSWORD_BCRYPT);
+    if ($db->query("UPDATE users SET password_hash = '$hash' WHERE id = $user_id")) {
+        create_notification($db, $user_id, 'Password Changed', 'Your administrator password has been updated.');
+        send_json(['success' => true, 'message' => 'Admin password updated successfully.']);
+    }
+    send_json(['success' => false, 'error' => $db->error], 500);
+}
+
 function handle_login($db, $input) {
     $email = $db->real_escape_string($input['email'] ?? '');
     $pass  = $input['password'] ?? '';
@@ -1181,6 +1288,10 @@ function handle_login($db, $input) {
 
     if ($user && password_verify($pass, $user['password_hash'])) {
         $token = base64_encode(json_encode(['id' => $user['id'], 'role' => $user['role']]));
+
+        // Login notification
+        create_notification($db, $user['id'], 'New Login', 'A new login was detected on your account at ' . date('Y-m-d H:i:s'), 'security');
+
         send_json([
             'success' => true,
             'token'   => $token,
@@ -1189,7 +1300,10 @@ function handle_login($db, $input) {
                 'name'              => $user['name'],
                 'role'              => $user['role'],
                 'email'             => $user['email'],
-                'email_verified_at' => $user['email_verified_at'], // ← add this
+                'phone'             => $user['phone'],
+                'country'           => $user['country'],
+                'profile_image'     => $user['profile_image'],
+                'email_verified_at' => $user['email_verified_at'],
             ],
         ]);
     }
@@ -1652,7 +1766,7 @@ function handle_admin_get_settings($db) {
 }
 
 function handle_get_site_settings($db) {
-    $res = $db->query("SELECT `key`, `value` FROM settings WHERE `key` IN ('site_name', 'site_logo', 'support_email', 'default_currency')");
+    $res = $db->query("SELECT `key`, `value` FROM settings WHERE `key` IN ('site_name', 'site_logo', 'support_email', 'default_currency', 'min_deposit', 'max_deposit', 'wallet_btc', 'wallet_eth', 'wallet_usdt')");
     $settings = [];
     while ($row = $res->fetch_assoc()) {
         $settings[$row['key']] = $row['value'];
@@ -1790,12 +1904,21 @@ function handle_admin_approve_transaction($db, $input) {
  
     // Mark as completed
     $db->query("UPDATE transactions SET status = 'completed' WHERE id = $txn_id");
- 
+
+    $uid = (int)$txn['user_id'];
+    $amount = (float)$txn['amount'];
+    $type = $txn['type'];
+
+    if ($type === 'withdrawal') {
+        create_notification($db, $uid, 'Withdrawal Completed', "Your withdrawal request for \$$amount has been processed.", 'success');
+    }
+
     // Credit the user's wallet for deposits (if any in transactions table)
     if ($txn['type'] === 'deposit') {
         $uid    = (int)$txn['user_id'];
         $amount = (float)$txn['amount'];
         $db->query("UPDATE users SET wallet_balance = wallet_balance + $amount WHERE id = $uid");
+        create_notification($db, $uid, 'Deposit Credited', "Your deposit of \$$amount has been credited to your wallet.", 'success');
     }
  
     send_json(['success' => true, 'message' => 'Transaction approved.']);
@@ -1839,6 +1962,7 @@ function handle_admin_reject_transaction($db, $input) {
             $amount = (float)$txn['amount'];
             $uid = (int)$txn['user_id'];
             $db->query("UPDATE users SET wallet_balance = wallet_balance + $amount WHERE id = $uid");
+            create_notification($db, $uid, 'Withdrawal Rejected', "Your withdrawal request for \$$amount has been rejected. Reason: $reason", 'error');
         }
         $db->commit();
         send_json(['success' => true, 'message' => 'Transaction rejected']);

@@ -97,6 +97,8 @@ export function AdminSettings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
+  const [adminPass, setAdminPass] = useState("");
+  const [passSaving, setPassSaving] = useState(false);
 
   useEffect(() => {
     adminService.getSettings().then(res => {
@@ -150,6 +152,10 @@ export function AdminSettings() {
               { label: "Support Email", key: "support_email" },
               { label: "Default Currency", key: "default_currency" },
               { label: "Min Deposit (USD)", key: "min_deposit" },
+              { label: "Max Deposit (USD)", key: "max_deposit" },
+              { label: "BTC Wallet Address", key: "wallet_btc" },
+              { label: "ETH Wallet Address", key: "wallet_eth" },
+              { label: "USDT Wallet Address", key: "wallet_usdt" },
             ].map((f) => (
               <div key={f.key}>
                 <label className="text-xs font-bold uppercase tracking-wider text-[#8897A9] block mb-1.5">{f.label}</label>
@@ -169,26 +175,37 @@ export function AdminSettings() {
 
         {/* Admin profile */}
         <div className="bg-white border border-surface-border rounded-xl shadow-card p-6">
-          <h3 className="font-display font-bold text-base text-primary mb-5">Admin Profile</h3>
+          <h3 className="font-display font-bold text-base text-primary mb-5">Admin Security</h3>
           <div className="space-y-5">
-            {[
-              { label: "Full Name", value: "Admin User" },
-              { label: "Email Address", value: "admin@vantageCFD.com" },
-              { label: "Role", value: "Super Admin" },
-            ].map((f) => (
-              <div key={f.label}>
-                <label className="text-xs font-bold uppercase tracking-wider text-[#8897A9] block mb-1.5">{f.label}</label>
-                <input
-                  defaultValue={f.value}
-                  className="w-full px-4 py-2.5 rounded-[10px] border border-surface-border text-sm text-primary focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/10 transition-all"
-                />
-              </div>
-            ))}
             <div>
-              <label className="text-xs font-bold uppercase tracking-wider text-[#8897A9] block mb-1.5">New Password</label>
-              <input type="password" placeholder="Leave blank to keep current" className="w-full px-4 py-2.5 rounded-[10px] border border-surface-border text-sm text-primary focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/10 transition-all" />
+              <label className="text-xs font-bold uppercase tracking-wider text-[#8897A9] block mb-1.5">Reset Admin Password</label>
+              <input
+                type="password"
+                value={adminPass}
+                onChange={e => setAdminPass(e.target.value)}
+                placeholder="Enter new admin password"
+                className="w-full px-4 py-2.5 rounded-[10px] border border-surface-border text-sm text-primary focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/10 transition-all"
+              />
             </div>
-            <button className="btn-primary text-sm py-2.5 px-5">Update Profile</button>
+            <button
+              onClick={async (e) => {
+                e.preventDefault();
+                if(!adminPass) return alert("Please enter a password");
+                setPassSaving(true);
+                try {
+                  await adminService.adminResetPassword(adminPass);
+                  setMsg("Admin password updated!");
+                  setAdminPass("");
+                  setTimeout(() => setMsg(""), 3000);
+                } catch(err) { alert(err.message); }
+                finally { setPassSaving(false); }
+              }}
+              disabled={passSaving}
+              className="btn-primary text-sm py-2.5 px-5 flex items-center gap-2"
+            >
+              {passSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+              Update Admin Password
+            </button>
           </div>
         </div>
 
