@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, NavLink, useNavigate, Outlet } from "react-router-dom";
 import {
   LayoutDashboard, CreditCard, ArrowLeftRight, TrendingUp,
   User, ShieldCheck, LogOut, Menu, X, ChevronRight, Bell, Wallet, Users,Receipt
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { siteService } from "../../services/api";
 import UnverifiedBanner from "../../components/UnverifiedBanner";
 
 const navItems = [
@@ -20,8 +21,15 @@ const navItems = [
 
 export default function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [siteLogo, setSiteLogo] = useState("");
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    siteService.getSettings().then(res => {
+      if (res.data?.site_logo) setSiteLogo(res.data.site_logo);
+    });
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -40,11 +48,15 @@ export default function DashboardLayout() {
 
         {/* Logo */}
         <div className="flex items-center gap-3 px-5 py-5 border-b border-white/10 h-[68px]">
-          <div className="w-8 h-8 bg-accent rounded-[8px] flex items-center justify-center flex-shrink-0">
-            <svg viewBox="0 0 20 20" className="w-4 h-4 fill-white">
-              <path d="M10 2L3 7v6l7 5 7-5V7L10 2zm0 2.5l5 3.5v4L10 15 5 12V8l5-3.5z" />
-            </svg>
-          </div>
+          {siteLogo ? (
+            <img src={siteLogo} alt="Logo" style={{height:"24px", objectFit: "contain"}}/>
+          ) : (
+            <div className="w-8 h-8 bg-accent rounded-[8px] flex items-center justify-center flex-shrink-0">
+              <svg viewBox="0 0 20 20" className="w-4 h-4 fill-white">
+                <path d="M10 2L3 7v6l7 5 7-5V7L10 2zm0 2.5l5 3.5v4L10 15 5 12V8l5-3.5z" />
+              </svg>
+            </div>
+          )}
           {sidebarOpen && (
             <span className="font-display font-extrabold text-base text-white truncate">
               vāntãgeCFD Portal

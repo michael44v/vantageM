@@ -48,9 +48,7 @@ export default function Navbar() {
         <div className="max-w-[1200px] mx-auto px-10 h-full flex items-center justify-between gap-8" style={{backgroundColor:"white"}}>
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2.5 flex-shrink-0">
-            <div className="w-9 h-9 bg-accent rounded-[9px] flex items-center justify-center overflow-hidden">
-             <img src={siteLogo} alt="Logo" style={{width:"60px",height:"60px", objectFit: "cover"}}/>
-            </div>
+             <img src={siteLogo} alt="Logo" style={{height:"32px", objectFit: "contain"}}/>
             <span className="font-display font-extrabold text-xl text-primary">{siteName}</span>
           </Link>
 
