@@ -191,6 +191,9 @@ case 'admin_upsert_signal':
 case 'admin_delete_signal':
     handle_admin_delete_signal($db, $input);
     break;
+case 'admin_close_position':
+    handle_admin_close_position($db, $input);
+    break;
 case 'admin_get_kyc':
     handle_admin_get_kyc($db);
     break;
@@ -1287,6 +1290,10 @@ function handle_admin_reset_password($db, $input) {
 }
 
 function handle_login($db, $input) {
+    // Maintenance Check
+    $maint = $db->query("SELECT value FROM settings WHERE `key` = 'maintenance_mode' LIMIT 1")->fetch_assoc();
+    $is_maint = ($maint['value'] ?? '0') === '1';
+
     $email = $db->real_escape_string($input['email'] ?? '');
     $pass  = $input['password'] ?? '';
 
@@ -1294,6 +1301,10 @@ function handle_login($db, $input) {
     $user = $res->fetch_assoc();
 
     if ($user && password_verify($pass, $user['password_hash'])) {
+        if ($is_maint && $user['role'] !== 'admin') {
+            send_json(['success' => false, 'error' => 'System is currently under maintenance. Please try again later.'], 503);
+        }
+
         $token = base64_encode(json_encode(['id' => $user['id'], 'role' => $user['role']]));
 
         // Login notification
@@ -1318,6 +1329,12 @@ function handle_login($db, $input) {
 }
 
 function handle_register($db, $input) {
+    // Maintenance Check
+    $maint = $db->query("SELECT value FROM settings WHERE `key` = 'maintenance_mode' LIMIT 1")->fetch_assoc();
+    if (($maint['value'] ?? '0') === '1') {
+        send_json(['success' => false, 'error' => 'Registration is currently disabled due to system maintenance.'], 503);
+    }
+
     $first   = $db->real_escape_string(trim($input['first_name'] ?? ''));
     $last    = $db->real_escape_string(trim($input['last_name']  ?? ''));
     $name    = trim("$first $last");
@@ -1439,7 +1456,8 @@ function handle_admin_live_trades($db) {
             FROM positions p
             JOIN users u ON p.user_id = u.id
             JOIN trading_accounts a ON p.trading_account_id = a.id
-            WHERE p.status = 'open'";
+            WHERE p.status = 'open'
+            ORDER BY p.created_at DESC";
     $res = $db->query($sql);
     $trades = $res->fetch_all(MYSQLI_ASSOC);
 
@@ -1952,6 +1970,46 @@ function handle_admin_approve_transaction($db, $input) {
     }
  
     send_json(['success' => true, 'message' => 'Transaction approved.']);
+}
+
+function handle_admin_close_position($db, $input) {
+    if (!is_admin()) send_json(['success' => false, 'error' => 'Unauthorized'], 403);
+    $pos_id = (int)($input['position_id'] ?? 0);
+    if (!$pos_id) send_json(['success' => false, 'error' => 'Missing position_id'], 400);
+
+    // Fetch position to close
+    $res = $db->query("SELECT * FROM positions WHERE id = $pos_id AND status = 'open' LIMIT 1");
+    if ($res->num_rows === 0) send_json(['success' => false, 'error' => 'Position not found or already closed'], 404);
+    $pos = $res->fetch_assoc();
+
+    // 1. Close this position
+    // (We reuse the simulation logic from handle_close_position for consistency)
+    $move        = (rand(-50, 50) / 100000);
+    $close_price = round((float)$pos['entry_price'] + $move, 5);
+    $direction   = $pos['type'] === 'long' ? 1 : -1;
+    $pnl         = round($direction * ($close_price - (float)$pos['entry_price']) * (float)$pos['lots'] * 100000, 2);
+
+    $db->begin_transaction();
+    try {
+        $db->query("UPDATE positions SET status = 'closed', current_price = $close_price, pnl = $pnl, closed_at = NOW() WHERE id = $pos_id");
+        $db->query("UPDATE trading_accounts SET balance = balance + $pnl WHERE id = {$pos['trading_account_id']}");
+
+        // 2. Close all associated copy trades if this was a provider trade
+        $copies = $db->query("SELECT * FROM positions WHERE copy_trade_id = $pos_id AND status = 'open'");
+        while ($c = $copies->fetch_assoc()) {
+            $c_id = (int)$c['id'];
+            $c_direction = $c['type'] === 'long' ? 1 : -1;
+            $c_pnl = round($c_direction * ($close_price - (float)$c['entry_price']) * (float)$c['lots'] * 100000, 2);
+            $db->query("UPDATE positions SET status = 'closed', current_price = $close_price, pnl = $c_pnl, closed_at = NOW() WHERE id = $c_id");
+            $db->query("UPDATE trading_accounts SET balance = balance + $c_pnl WHERE id = {$c['trading_account_id']}");
+        }
+
+        $db->commit();
+        send_json(['success' => true, 'message' => 'Position (and associated copy trades) closed by administrator.']);
+    } catch (Exception $e) {
+        $db->rollback();
+        send_json(['success' => false, 'error' => 'Failed to close position: ' . $e->getMessage()], 500);
+    }
 }
 
 function handle_admin_adjust_balance($db, $input) {

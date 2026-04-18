@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Eye, EyeOff, AlertCircle, TrendingUp, Shield, Zap } from "lucide-react";
+import { Eye, EyeOff, AlertCircle, TrendingUp, Shield, Zap, Settings2 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { siteService } from "../services/api";
 
 
 const STATS = [
@@ -22,11 +23,21 @@ export default function LoginPage() {
   const [showPass, setShowPass] = useState(false);
   const [error, setError]       = useState("");
   const [loading, setLoading]   = useState(false);
-   const [siteLogo, setSiteLogo] = useState("https://www.vantagemarkets.com/wp-content/themes/vantage/images/logo.svg");
+  const [siteLogo, setSiteLogo] = useState("https://www.vantagemarkets.com/wp-content/themes/vantage/images/logo.svg");
+  const [maintenance, setMaintenance] = useState(false);
  
 
   const { login } = useAuth();
   const navigate  = useNavigate();
+
+  useEffect(() => {
+    siteService.getSettings().then(res => {
+      if (res.success) {
+        if (res.data.site_logo) setSiteLogo(res.data.site_logo);
+        if (res.data.maintenance_mode === "1") setMaintenance(true);
+      }
+    });
+  }, []);
 
   const handleChange = (field) => (e) =>
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
@@ -130,6 +141,17 @@ export default function LoginPage() {
           </Link>
 
           <div className="bg-white border border-surface-border rounded-2xl p-10 shadow-card">
+            {maintenance && (
+              <div className="mb-8 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
+                 <Settings2 className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                 <div>
+                    <h3 className="text-sm font-bold text-amber-900">System Maintenance</h3>
+                    <p className="text-xs text-amber-700 leading-relaxed mt-0.5">
+                      We're currently performing scheduled maintenance. Only administrative access is available.
+                    </p>
+                 </div>
+              </div>
+            )}
             <h1 className="font-display font-extrabold text-3xl text-primary mb-1">Sign In</h1>
             <p className="text-sm text-[#4A5568] mb-8">
               No account yet?{" "}

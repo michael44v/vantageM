@@ -92,7 +92,7 @@ export default function NotificationsPage() {
                     {n.title}
                   </h4>
                   <span className="text-[10px] font-medium text-[#8897A9] whitespace-nowrap ml-2">
-                    {(new Date(n.created_at), 'MMM d, h:mm a')}
+                    {n.created_at ? new Date(n.created_at.replace(/-/g, '/')).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) : '—'}
                   </span>
                 </div>
                 <p className="text-sm text-[#4A5568] leading-relaxed">

@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Eye, EyeOff, AlertCircle, Check, Mail, RefreshCw, Loader2 } from "lucide-react";
+import { Eye, EyeOff, AlertCircle, Check, Mail, RefreshCw, Loader2, Settings2 } from "lucide-react";
 import { Input } from "../components/ui";
-import { authService, mailService } from "../services/api";
+import { authService, mailService, siteService } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 
 const countries = [
@@ -25,6 +25,15 @@ export default function RegisterPage() {
   const [apiError, setApiError] = useState("");
   const [loading, setLoading]   = useState(false);
   const [done, setDone]         = useState(false);
+  const [maintenance, setMaintenance] = useState(false);
+
+  useEffect(() => {
+    siteService.getSettings().then(res => {
+      if (res.success && res.data.maintenance_mode === "1") {
+        setMaintenance(true);
+      }
+    });
+  }, []);
 
   // Add these missing state variables (put them with your other useState hooks):
 const [userId, setUserId]                 = useState(null);
@@ -184,6 +193,17 @@ const handleSubmit = async (e) => {
           </div>
 
           <div className="bg-white border border-surface-border rounded-xl p-10 shadow-card">
+            {maintenance && (
+              <div className="mb-8 p-6 bg-amber-50 border border-amber-200 rounded-xl text-center">
+                 <Settings2 className="w-10 h-10 text-amber-600 mx-auto mb-4" />
+                 <h2 className="text-lg font-bold text-amber-900">Registration Suspended</h2>
+                 <p className="text-sm text-amber-700 leading-relaxed mt-2">
+                   The system is currently undergoing maintenance. Registration is temporarily disabled. Please check back later.
+                 </p>
+                 <Link to="/" className="mt-6 inline-block text-accent font-bold hover:underline">Return to Home</Link>
+              </div>
+            )}
+            {!maintenance && <>
             <h1 className="font-display font-extrabold text-3xl text-primary mb-2">
               {step === 1 ? "Create Your Account" : "Secure Your Account"}
             </h1>
@@ -314,6 +334,7 @@ const handleSubmit = async (e) => {
                 </div>
               </form>
             )}
+            </>}
           </div>
         </div>
       </div>
