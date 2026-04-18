@@ -1484,25 +1484,31 @@ function get_auth_user_id(): int {
 // Payload: { provider_id, trading_account_id, risk_multiplier }
 function handle_copy_signal($db, $input) {
     $copier_id          = get_auth_user_id();
-    $provider_id        = (int)($input['provider_id']        ?? 0);
+    $signal_id          = (int)($input['provider_id']        ?? 0); // This is actually signal ID from frontend
     $trading_account_id = (int)($input['trading_account_id'] ?? 0);
     $risk_multiplier    = (float)($input['risk_multiplier']  ?? 1.0);
  
-    if (!$copier_id || !$provider_id || !$trading_account_id) {
+    if (!$copier_id || !$signal_id || !$trading_account_id) {
         send_json(['success' => false, 'error' => 'Missing required fields.'], 400);
     }
  
+    // Fetch actual provider's user_id from signals table
+    $prov_res = $db->query("SELECT user_id FROM signals WHERE id = $signal_id LIMIT 1");
+    if ($prov_res->num_rows === 0) {
+        send_json(['success' => false, 'error' => 'Signal provider not found.'], 404);
+    }
+    $prov = $prov_res->fetch_assoc();
+    $provider_user_id = (int)$prov['user_id'];
+
     // Prevent self-copy
-    $prov_res = $db->query("SELECT user_id FROM signals WHERE id = $provider_id LIMIT 1");
-    $prov     = $prov_res->fetch_assoc();
-    if ($prov && (int)$prov['user_id'] === $copier_id) {
+    if ($provider_user_id === $copier_id) {
         send_json(['success' => false, 'error' => 'You cannot copy your own signal.'], 400);
     }
  
-    // Upsert: if already copying, update; otherwise insert
+    // Upsert into copy_relationships using provider_user_id
     $check = $db->query(
         "SELECT id FROM copy_relationships
-         WHERE copier_id = $copier_id AND provider_id = $provider_id
+         WHERE copier_id = $copier_id AND provider_id = $provider_user_id
          AND trading_account_id = $trading_account_id LIMIT 1"
     );
  
@@ -1518,11 +1524,12 @@ function handle_copy_signal($db, $input) {
  
     $sql = "INSERT INTO copy_relationships
                 (copier_id, provider_id, trading_account_id, risk_multiplier, status)
-            VALUES ($copier_id, $provider_id, $trading_account_id, $risk_multiplier, 'active')";
+            VALUES ($copier_id, $provider_user_id, $trading_account_id, $risk_multiplier, 'active')";
  
     if ($db->query($sql)) {
         // Increment subscriber count on signals table
-        $db->query("UPDATE signals SET subscribers = subscribers + 1 WHERE id = $provider_id");
+        $db->query("UPDATE signals SET subscribers = subscribers + 1 WHERE id = $signal_id");
+        create_notification($db, $copier_id, 'Copy Trading Active', "You have started copying signal #$signal_id with a {$risk_multiplier}x multiplier.", 'success');
         send_json(['success' => true, 'message' => 'You are now copying this provider.',
                    'data' => ['copy_id' => $db->insert_id]]);
     }
