@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, AlertCircle, TrendingUp, Shield, Zap } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
+
 const STATS = [
   { value: "5M+",    label: "Registered Traders" },
   { value: "0.0",    label: "Pip Spreads From" },
@@ -21,6 +22,8 @@ export default function LoginPage() {
   const [showPass, setShowPass] = useState(false);
   const [error, setError]       = useState("");
   const [loading, setLoading]   = useState(false);
+   const [siteLogo, setSiteLogo] = useState("https://www.vantagemarkets.com/wp-content/themes/vantage/images/logo.svg");
+ 
 
   const { login } = useAuth();
   const navigate  = useNavigate();
@@ -68,12 +71,11 @@ export default function LoginPage() {
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2.5 relative z-10">
           <div className="w-9 h-9 bg-accent rounded-[9px] flex items-center justify-center">
-            <svg viewBox="0 0 20 20" className="w-5 h-5 fill-white">
-              <path d="M10 2L3 7v6l7 5 7-5V7L10 2zm0 2.5l5 3.5v4L10 15 5 12V8l5-3.5z" />
-            </svg>
+             
           </div>
           <span className="font-display font-extrabold text-xl text-white tracking-tight">
-            vāntãgeCFD
+            <img src={siteLogo} alt="Logo" style={{height:"32px", objectFit: "contain"}}/>
+          
           </span>
         </Link>
 
@@ -122,12 +124,9 @@ export default function LoginPage() {
 
           {/* Mobile logo */}
           <Link to="/" className="flex items-center gap-2 mb-8 lg:hidden">
-            <div className="w-8 h-8 bg-accent rounded-[8px] flex items-center justify-center">
-              <svg viewBox="0 0 20 20" className="w-4 h-4 fill-white">
-                <path d="M10 2L3 7v6l7 5 7-5V7L10 2zm0 2.5l5 3.5v4L10 15 5 12V8l5-3.5z" />
-              </svg>
-            </div>
-            <span className="font-display font-extrabold text-lg text-primary">vāntãgeCFD</span>
+            
+            <span className="font-display font-extrabold text-lg text-primary">  <img src={siteLogo} alt="Logo" style={{height:"32px", objectFit: "contain"}}/>
+          </span>
           </Link>
 
           <div className="bg-white border border-surface-border rounded-2xl p-10 shadow-card">

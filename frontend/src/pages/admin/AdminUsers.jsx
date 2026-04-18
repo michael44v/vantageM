@@ -21,6 +21,7 @@ export default function AdminUsers() {
   }, []);
 
   const fetchUsers = async () => {
+
     setLoading(true);
     try {
       const res = await adminService.getUsers(1, 100);
@@ -149,11 +150,12 @@ export default function AdminUsers() {
                         {u.name ? u.name[0].toUpperCase() : "?"}
                       </div>
                       <div>
-                        <div className="font-semibold text-primary text-sm">{u.name}</div>
+                        <div className="font-semibold text-primary text-sm">{u.name}(USER_ID: {u.id})</div>
                         <div className="text-xs text-[#8897A9]">{u.email}</div>
                       </div>
                     </div>
                   </td>
+                
                   <td className="px-5 py-4 text-sm text-[#4A5568]">{u.country}</td>
                   <td className="px-5 py-4">
                     <span className="text-xs font-semibold text-primary bg-surface border border-surface-border px-2.5 py-1 rounded-full">
@@ -241,6 +243,10 @@ export default function AdminUsers() {
 
               {/* Detail grid */}
               <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs bg-surface rounded-[10px] p-3">
+
+                <span className="text-[#8897A9]">UID</span>
+                <span className="text-primary font-medium">{u.id}</span>
+
                 <span className="text-[#8897A9]">Country</span>
                 <span className="text-primary font-medium">{u.country}</span>
 

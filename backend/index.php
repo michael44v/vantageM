@@ -1,4 +1,5 @@
 <?php
+
 /**
  * vāntãgeCFD - Simple API Gateway
  * Unified single-file backend (Procedural approach)
@@ -21,12 +22,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(204);
     exit;
 }
-
+error_reporting(E_ALL);
+ini_set('display_errors', '0');
+ini_set('log_errors', '1');
+ini_set('error_log', __DIR__ . '/php_errors.log');
 // --- 2. Database Connection ---
 $host = 'localhost';
-$user = 'jvrzjzbc_root';
+$user = 'u846689232_vantage_root';
 $pass = 'victor47009A?';
-$name = 'jvrzjzbc_vantage_db';
+$name = 'u846689232_vantage';
 
 $db = new mysqli($host, $user, $pass, $name);
 if ($db->connect_error) {
@@ -1484,28 +1488,33 @@ function get_auth_user_id(): int {
 // Payload: { provider_id, trading_account_id, risk_multiplier }
 function handle_copy_signal($db, $input) {
     $copier_id          = get_auth_user_id();
-    $provider_id        = (int)($input['provider_id']        ?? 0);
+    $signal_id          = (int)($input['provider_id']        ?? 0);
     $trading_account_id = (int)($input['trading_account_id'] ?? 0);
     $risk_multiplier    = (float)($input['risk_multiplier']  ?? 1.0);
- 
-    if (!$copier_id || !$provider_id || !$trading_account_id) {
+
+    if (!$copier_id || !$signal_id || !$trading_account_id) {
         send_json(['success' => false, 'error' => 'Missing required fields.'], 400);
     }
- 
+
+    // Resolve signal → provider user_id
+    $sig_res = $db->query("SELECT user_id FROM signals WHERE id = $signal_id LIMIT 1");
+    if ($sig_res->num_rows === 0) {
+        send_json(['success' => false, 'error' => 'Signal not found.'], 404);
+    }
+    $provider_id = (int)$sig_res->fetch_assoc()['user_id'];
+
     // Prevent self-copy
-    $prov_res = $db->query("SELECT user_id FROM signals WHERE id = $provider_id LIMIT 1");
-    $prov     = $prov_res->fetch_assoc();
-    if ($prov && (int)$prov['user_id'] === $copier_id) {
+    if ($copier_id === $provider_id) {
         send_json(['success' => false, 'error' => 'You cannot copy your own signal.'], 400);
     }
- 
-    // Upsert: if already copying, update; otherwise insert
+
+    // Upsert: if already copying, reactivate; otherwise insert
     $check = $db->query(
         "SELECT id FROM copy_relationships
          WHERE copier_id = $copier_id AND provider_id = $provider_id
          AND trading_account_id = $trading_account_id LIMIT 1"
     );
- 
+
     if ($check->num_rows > 0) {
         $row_id = $check->fetch_assoc()['id'];
         $db->query(
@@ -1515,17 +1524,17 @@ function handle_copy_signal($db, $input) {
         );
         send_json(['success' => true, 'message' => 'Copy relationship updated.']);
     }
- 
+
     $sql = "INSERT INTO copy_relationships
                 (copier_id, provider_id, trading_account_id, risk_multiplier, status)
             VALUES ($copier_id, $provider_id, $trading_account_id, $risk_multiplier, 'active')";
- 
+
     if ($db->query($sql)) {
-        // Increment subscriber count on signals table
-        $db->query("UPDATE signals SET subscribers = subscribers + 1 WHERE id = $provider_id");
+        $db->query("UPDATE signals SET subscribers = subscribers + 1 WHERE id = $signal_id");
         send_json(['success' => true, 'message' => 'You are now copying this provider.',
                    'data' => ['copy_id' => $db->insert_id]]);
     }
+
     send_json(['success' => false, 'error' => $db->error], 500);
 }
  
