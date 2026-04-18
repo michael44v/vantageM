@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { Lock, ArrowLeft, Loader2, CheckCircle, Shield, AlertCircle } from "lucide-react";
-import { authService } from "../services/api";
+import { authService, siteService } from "../services/api";
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
@@ -15,6 +15,15 @@ export default function ResetPassword() {
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState("");
+  const [siteLogo, setSiteLogo] = useState("");
+
+  useEffect(() => {
+    siteService.getSettings().then(res => {
+      if (res.success && res.data.site_logo) {
+        setSiteLogo(res.data.site_logo);
+      }
+    }).catch(err => console.error("Failed to fetch site settings", err));
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -59,10 +68,16 @@ export default function ResetPassword() {
     <div className="min-h-screen bg-[#F4F6FA] flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 font-sans">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <Link to="/" className="flex items-center justify-center gap-2 mb-8">
-           <div className="w-10 h-10 bg-accent rounded-xl flex items-center justify-center shadow-lg shadow-accent/20">
-              <Shield className="w-6 h-6 text-white" />
-           </div>
-           <span className="font-display font-extrabold text-2xl text-primary tracking-tight">vāntãgeCFD</span>
+           {siteLogo ? (
+             <img src={siteLogo} alt="Logo" className="h-10 object-contain" />
+           ) : (
+             <>
+               <div className="w-10 h-10 bg-accent rounded-xl flex items-center justify-center shadow-lg shadow-accent/20">
+                  <Shield className="w-6 h-6 text-white" />
+               </div>
+               <span className="font-display font-extrabold text-2xl text-primary tracking-tight">vāntãgeCFD</span>
+             </>
+           )}
         </Link>
 
         <div className="bg-white py-10 px-6 shadow-xl rounded-3xl sm:px-10 border border-[#DDE3EE]">

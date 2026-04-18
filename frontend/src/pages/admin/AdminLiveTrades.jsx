@@ -49,8 +49,9 @@ export default function AdminLiveTrades() {
       </div>
 
       <div className="bg-white border border-[#E0E0E0] rounded-xl shadow-card overflow-hidden">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-[#F8F8F8] border-b border-[#E0E0E0]">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm min-w-[800px]">
+            <thead className="bg-[#F8F8F8] border-b border-[#E0E0E0]">
             <tr>
               {["Trader", "Symbol", "Side", "Size", "Entry", "Current", "PnL"].map((h) => (
                 <th key={h} className="px-6 py-4 text-xs font-bold uppercase tracking-widest text-[#666666]">
@@ -96,6 +97,7 @@ export default function AdminLiveTrades() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

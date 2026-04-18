@@ -182,6 +182,9 @@ case 'admin_delete_user':
 case 'admin_get_signals':
     handle_admin_get_signals($db);
     break;
+case 'admin_get_provider_copiers':
+    handle_admin_get_provider_copiers($db);
+    break;
 case 'admin_upsert_signal':
     handle_admin_upsert_signal($db, $input);
     break;
@@ -1735,6 +1738,24 @@ function handle_admin_delete_user($db, $input) {
 function handle_admin_get_signals($db) {
     if (!is_admin()) send_json(['success' => false, 'error' => 'Unauthorized'], 403);
     $res = $db->query("SELECT s.*, u.email as provider_email FROM signals s JOIN users u ON u.id = s.user_id");
+    send_json(['success' => true, 'data' => $res->fetch_all(MYSQLI_ASSOC)]);
+}
+
+function handle_admin_get_provider_copiers($db) {
+    if (!is_admin()) send_json(['success' => false, 'error' => 'Unauthorized'], 403);
+    $provider_id = (int)($_GET['provider_id'] ?? 0);
+    if (!$provider_id) send_json(['success' => false, 'error' => 'Missing provider_id'], 400);
+
+    $sql = "SELECT cr.id, cr.risk_multiplier, cr.status, cr.created_at,
+                   u.name AS copier_name, u.email AS copier_email,
+                   ta.account_number, ta.balance
+            FROM   copy_relationships cr
+            JOIN   users u ON u.id = cr.copier_id
+            JOIN   trading_accounts ta ON ta.id = cr.trading_account_id
+            WHERE  cr.provider_id = $provider_id
+            ORDER  BY cr.created_at DESC";
+
+    $res = $db->query($sql);
     send_json(['success' => true, 'data' => $res->fetch_all(MYSQLI_ASSOC)]);
 }
 

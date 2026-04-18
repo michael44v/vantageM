@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { Users, TrendingUp, Search, Loader2, Plus, Edit2, Trash2, Shield, X, Save } from "lucide-react";
 import { adminService } from "../../services/api";
 import { Badge } from "../../components/ui";
@@ -99,6 +100,9 @@ export default function AdminSignals() {
                     </td>
                     <td className="px-5 py-4">
                       <div className="flex gap-2">
+                        <Link to={`/admin/copy-trading/${s.user_id}/copiers`} className="p-1.5 rounded-lg text-teal hover:bg-teal/50 transition-colors" title="View Copiers">
+                           <Users className="w-4 h-4" />
+                        </Link>
                         <button onClick={() => setModal({ mode: 'edit', data: s })} className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors"><Edit2 className="w-4 h-4" /></button>
                         <button onClick={() => handleDelete(s.id)} className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 transition-colors"><Trash2 className="w-4 h-4" /></button>
                       </div>

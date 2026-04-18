@@ -480,6 +480,8 @@ export const adminService = {
 
   getAllTransactions: (params = {}) => req("admin_get_all_transactions", { params }),
 
+  getProviderCopiers: (providerId) => req("admin_get_provider_copiers", { params: { provider_id: providerId } }),
+
   getMarketData: () => req("get_market_data"),
 
   adjustBalance: (userId, amount, type) =>
