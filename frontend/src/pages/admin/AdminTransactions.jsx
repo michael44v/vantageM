@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Check, X, Loader2 } from "lucide-react";
+import { Search, Check, X, Loader2, Download } from "lucide-react";
 import { adminService } from "../../services/api";
 import { Badge } from "../../components/ui";
 
@@ -23,6 +23,33 @@ export default function AdminTransactions() {
   useEffect(() => {
     fetchTransactions();
   }, []);
+
+  const exportCSV = () => {
+    const headers = ["ID", "User", "Type", "Amount", "Currency", "Method", "Status", "Date"];
+    const escape = (val) => `"${String(val).replace(/"/g, '""')}"`;
+    const rows = filtered.map(t => [
+      t.id,
+      t.user_name,
+      t.type,
+      t.amount,
+      t.currency,
+      t.method,
+      t.status,
+      t.created_at
+    ].map(escape));
+
+    const csvContent = "data:text/csv;charset=utf-8,"
+      + headers.join(",") + "\n"
+      + rows.map(r => r.join(",")).join("\n");
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `transactions_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const fetchTransactions = async () => {
     setLoading(true);
@@ -81,9 +108,18 @@ export default function AdminTransactions() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-display font-extrabold text-3xl text-primary mb-1">Transactions</h1>
-        <p className="text-sm text-[#4A5568]">All deposits, withdrawals, and payment activity.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="font-display font-extrabold text-3xl text-primary mb-1">Transactions</h1>
+          <p className="text-sm text-[#4A5568]">All deposits, withdrawals, and payment activity.</p>
+        </div>
+        <button
+          onClick={exportCSV}
+          className="btn-primary py-2 px-4 flex items-center gap-2 text-sm"
+        >
+          <Download className="w-4 h-4" />
+          Export CSV
+        </button>
       </div>
 
       {/* Summary cards */}
@@ -148,7 +184,9 @@ export default function AdminTransactions() {
                   <td className="px-5 py-4 font-display font-bold text-sm text-primary">${parseFloat(tx.amount).toLocaleString()}</td>
                   <td className="px-5 py-4 text-xs text-[#4A5568]">{tx.method}</td>
                   <td className="px-5 py-4"><Badge variant={statusVariant(tx.status)}>{tx.status}</Badge></td>
-                  <td className="px-5 py-4 text-xs text-[#8897A9]">{new Date(tx.created_at).toLocaleDateString()}</td>
+                  <td className="px-5 py-4 text-xs text-[#8897A9]">
+                    {tx.created_at ? new Date(tx.created_at.replace(/-/g, '/')).toLocaleDateString() : '—'}
+                  </td>
                   <td className="px-5 py-4">
                     {(tx.status?.toLowerCase() === "pending" || tx.status?.toLowerCase() === "processing") && (
                       <div className="flex items-center gap-1.5">

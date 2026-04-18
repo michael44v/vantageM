@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Eye, Ban, Trash2, Edit2, Loader2, DollarSign } from "lucide-react";
+import { Search, Eye, Ban, Trash2, Edit2, Loader2, DollarSign, Download } from "lucide-react";
 import { adminService } from "../../services/api";
 import { Badge } from "../../components/ui";
 
@@ -19,6 +19,33 @@ export default function AdminUsers() {
   useEffect(() => {
     fetchUsers();
   }, []);
+
+  const exportCSV = () => {
+    const headers = ["ID", "Name", "Email", "Country", "Balance", "Role", "Status", "Joined"];
+    const escape = (val) => `"${String(val).replace(/"/g, '""')}"`;
+    const rows = filtered.map(u => [
+      u.id,
+      u.name,
+      u.email,
+      u.country,
+      u.wallet_balance,
+      u.role,
+      u.status,
+      u.created_at
+    ].map(escape));
+
+    const csvContent = "data:text/csv;charset=utf-8,"
+      + headers.join(",") + "\n"
+      + rows.map(r => r.join(",")).join("\n");
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `users_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const fetchUsers = async () => {
 
@@ -96,6 +123,13 @@ export default function AdminUsers() {
           <h1 className="font-display font-extrabold text-3xl text-primary mb-1">Users</h1>
           <p className="text-sm text-[#4A5568]">{users.length} registered accounts</p>
         </div>
+        <button
+          onClick={exportCSV}
+          className="btn-primary py-2 px-4 flex items-center gap-2 text-sm"
+        >
+          <Download className="w-4 h-4" />
+          Export CSV
+        </button>
       </div>
 
       {/* Filters */}

@@ -1,7 +1,8 @@
 import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchLiveTrades } from "../../store/slices/tradingSlice";
-import { TrendingUp, RefreshCcw, Activity, User, Globe } from "lucide-react";
+import { adminService } from "../../services/api";
+import { TrendingUp, RefreshCcw, Activity, Globe, XCircle, Download } from "lucide-react";
 
 export default function AdminLiveTrades() {
   const dispatch = useDispatch();
@@ -15,6 +16,46 @@ export default function AdminLiveTrades() {
 
   const onRefresh = () => dispatch(fetchLiveTrades());
 
+  const exportCSV = () => {
+    const headers = ["ID", "Trader", "Account #", "Symbol", "Side", "Type", "Size", "Entry", "Current", "PnL", "Joined"];
+    const escape = (val) => `"${String(val).replace(/"/g, '""')}"`;
+    const rows = trades.map(t => [
+      t.id,
+      t.trader_name,
+      t.account_number,
+      t.symbol,
+      t.type,
+      t.execution_type || 'manual',
+      t.lots,
+      t.entry_price,
+      t.current_price,
+      t.pnl,
+      t.created_at
+    ].map(escape));
+
+    const csvContent = "data:text/csv;charset=utf-8,"
+      + headers.join(",") + "\n"
+      + rows.map(r => r.join(",")).join("\n");
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `live_trades_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleClose = async (id) => {
+    if (!window.confirm("Are you sure you want to close this position and all its associated copy trades?")) return;
+    try {
+      await adminService.adminClosePosition(id);
+      dispatch(fetchLiveTrades());
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -22,6 +63,14 @@ export default function AdminLiveTrades() {
           <h1 className="font-display font-extrabold text-3xl text-primary mb-1">Live Trades</h1>
           <p className="text-sm text-[#4A5568]">Monitoring all open positions across the platform</p>
         </div>
+        <div className="flex gap-2">
+        <button
+          onClick={exportCSV}
+          className="btn-primary py-2 px-4 flex items-center gap-2 text-xs"
+        >
+          <Download className="w-3.5 h-3.5" />
+          Export CSV
+        </button>
         <button
           onClick={onRefresh}
           className="flex items-center gap-2 btn-ghost px-4 py-2 text-xs font-bold"
@@ -30,6 +79,7 @@ export default function AdminLiveTrades() {
           <RefreshCcw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
           Refresh
         </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -49,10 +99,11 @@ export default function AdminLiveTrades() {
       </div>
 
       <div className="bg-white border border-[#E0E0E0] rounded-xl shadow-card overflow-hidden">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-[#F8F8F8] border-b border-[#E0E0E0]">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm min-w-[800px]">
+            <thead className="bg-[#F8F8F8] border-b border-[#E0E0E0]">
             <tr>
-              {["Trader", "Symbol", "Side", "Size", "Entry", "Current", "PnL"].map((h) => (
+              {["Trader", "Symbol", "Side", "Type", "Size", "Entry", "Current", "PnL", "Action"].map((h) => (
                 <th key={h} className="px-6 py-4 text-xs font-bold uppercase tracking-widest text-[#666666]">
                   {h}
                 </th>
@@ -79,11 +130,25 @@ export default function AdminLiveTrades() {
                     {t.type}
                   </span>
                 </td>
+                <td className="px-6 py-5">
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest ${t.execution_type === 'copy' ? 'bg-blue-50 text-blue-600' : 'bg-orange-50 text-orange-600'}`}>
+                    {t.execution_type || 'manual'}
+                  </span>
+                </td>
                 <td className="px-6 py-5 text-[#333333] font-medium">{t.lots} Lots</td>
                 <td className="px-6 py-5 font-mono text-xs">{parseFloat(t.entry_price).toFixed(5)}</td>
                 <td className="px-6 py-5 font-mono text-xs text-primary">{parseFloat(t.current_price).toFixed(5)}</td>
                 <td className={`px-6 py-5 font-bold font-mono text-sm ${parseFloat(t.pnl) >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
                   {parseFloat(t.pnl) >= 0 ? "+" : ""}{parseFloat(t.pnl).toFixed(2)} USD
+                </td>
+                <td className="px-6 py-5">
+                   <button
+                     onClick={() => handleClose(t.id)}
+                     className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 transition-colors"
+                     title="Force Close Position"
+                   >
+                     <XCircle className="w-4 h-4" />
+                   </button>
                 </td>
               </tr>
             ))}
@@ -96,6 +161,7 @@ export default function AdminLiveTrades() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

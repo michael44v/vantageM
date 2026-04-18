@@ -7,11 +7,17 @@ export function AdminMarkets() {
   const [data, setData] = useState({ ticker: [], spreads: [] });
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const fetchMarkets = () => {
     adminService.getMarketData().then(res => {
       setData(res.data);
       setLoading(false);
     });
+  };
+
+  useEffect(() => {
+    fetchMarkets();
+    const interval = setInterval(fetchMarkets, 10000); // Update every 10s for "realtime" feel
+    return () => clearInterval(interval);
   }, []);
 
   if (loading) return <div className="flex justify-center py-20"><Loader2 className="w-10 h-10 animate-spin text-accent" /></div>;

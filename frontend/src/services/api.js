@@ -474,11 +474,15 @@ export const adminService = {
   upsertSignal: (signal) => req("admin_upsert_signal", { method: "POST", body: signal }),
   deleteSignal: (id) => req("admin_delete_signal", { method: "POST", body: { id } }),
 
+  adminClosePosition: (positionId) => req("admin_close_position", { method: "POST", body: { position_id: positionId } }),
+
   getKYCRequests: () => req("admin_get_kyc"),
   approveKYC: (id) => req("admin_approve_kyc", { method: "POST", body: { id } }),
   rejectKYC: (id, reason) => req("admin_reject_kyc", { method: "POST", body: { id, rejection_reason: reason } }),
 
   getAllTransactions: (params = {}) => req("admin_get_all_transactions", { params }),
+
+  getProviderCopiers: (providerId) => req("admin_get_provider_copiers", { params: { provider_id: providerId } }),
 
   getMarketData: () => req("get_market_data"),
 

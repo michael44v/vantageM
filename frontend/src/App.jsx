@@ -25,6 +25,7 @@ import AdminUsers from "./pages/admin/AdminUsers";
 import AdminTransactions from "./pages/admin/AdminTransactions";
 import AdminKYC from "./pages/admin/AdminKYC";
 import AdminSignals from "./pages/admin/AdminSignals";
+import AdminProviderCopiers from "./pages/admin/AdminProviderCopiers";
 import AdminMail from "./pages/admin/AdminMail";
 import { AdminMarkets, AdminSettings } from "./pages/admin/AdminMarketsAndSettings";
 
@@ -90,6 +91,7 @@ export default function App() {
             <Route path="kyc" element={<AdminKYC />} />
             <Route path="mail" element={<AdminMail />} />
             <Route path="copy-trading" element={<AdminSignals />} />
+            <Route path="copy-trading/:providerId/copiers" element={<AdminProviderCopiers />} />
             <Route path="markets" element={<AdminMarkets />} />
             <Route path="settings" element={<AdminSettings />} />
 
