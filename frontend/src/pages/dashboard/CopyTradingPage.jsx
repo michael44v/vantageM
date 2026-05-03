@@ -4,7 +4,7 @@ import {
   Loader2, AlertCircle, CheckCircle, X, RefreshCw,
   Copy, StopCircle, BarChart2, Zap
 } from "lucide-react";
-import { copyTradingService, accountService } from "../../services/api";
+import { copyTradingService, accountService, siteService } from "../../services/api";
 
 function Toast({ message, type = "success", onDone }) {
   useEffect(() => { const t = setTimeout(onDone, 4000); return () => clearTimeout(t); }, [onDone]);
@@ -17,11 +17,14 @@ function Toast({ message, type = "success", onDone }) {
 }
 
 // ── Copy Modal ────────────────────────────────────────────────────────────────
-function CopyModal({ provider, accounts, onClose, onSuccess }) {
+function CopyModal({ provider, accounts, onClose, onSuccess, siteSettings }) {
   const [selectedAcc, setSelectedAcc] = useState("");
   const [riskMultiplier, setRisk]     = useState("1.0");
   const [loading, setLoading]         = useState(false);
   const [error, setError]             = useState("");
+
+  const minCopy = parseFloat(siteSettings?.min_copy_balance ?? 1000);
+  const maxCopy = parseFloat(siteSettings?.max_copy_balance ?? 1000000);
 
   const liveAccounts = accounts.filter(
     (a) => a.is_demo === "0" || a.is_demo === false || a.is_demo === 0
@@ -133,17 +136,21 @@ function CopyModal({ provider, accounts, onClose, onSuccess }) {
 
           {/* Live preview */}
           {selectedAccObj && (
-            <div className="p-3 bg-emerald-50 border border-emerald-100 rounded-xl text-xs space-y-1">
-              <p className="font-bold text-emerald-700">Position Size Preview</p>
-              <p className="text-emerald-600">
+            <div className={`p-3 rounded-xl text-xs space-y-1 border ${parseFloat(selectedAccObj.balance) < minCopy ? "bg-red-50 border-red-100" : "bg-emerald-50 border-emerald-100"}`}>
+              <p className={`font-bold ${parseFloat(selectedAccObj.balance) < minCopy ? "text-red-700" : "text-emerald-700"}`}>
+                {parseFloat(selectedAccObj.balance) < minCopy ? "Balance Too Low" : "Position Size Preview"}
+              </p>
+              <p className={parseFloat(selectedAccObj.balance) < minCopy ? "text-red-600" : "text-emerald-600"}>
                 Your account: <strong>${parseFloat(selectedAccObj.balance).toFixed(2)}</strong>
-                &nbsp;·&nbsp;Risk mult: <strong>{riskMultiplier}×</strong>
+                {parseFloat(selectedAccObj.balance) < minCopy && ` (Min: $${minCopy})`}
               </p>
-              <p className="text-emerald-600">
-                If provider risks 2% → you risk:{" "}
-                <strong>${(parseFloat(selectedAccObj.balance) * 0.02 * parseFloat(riskMultiplier)).toFixed(2)}</strong>
-                &nbsp;({(2 * parseFloat(riskMultiplier)).toFixed(1)}% of your balance)
-              </p>
+              {parseFloat(selectedAccObj.balance) >= minCopy && (
+                <p className="text-emerald-600">
+                  If provider risks 2% → you risk:{" "}
+                  <strong>${(parseFloat(selectedAccObj.balance) * 0.02 * parseFloat(riskMultiplier)).toFixed(2)}</strong>
+                  &nbsp;({(2 * parseFloat(riskMultiplier)).toFixed(1)}% of your balance)
+                </p>
+              )}
             </div>
           )}
         </div>
@@ -156,7 +163,8 @@ function CopyModal({ provider, accounts, onClose, onSuccess }) {
 
         <div className="flex gap-3">
           <button onClick={onClose} className="flex-1 btn-ghost">Cancel</button>
-          <button onClick={handleCopy} disabled={loading || liveAccounts.length === 0}
+          <button onClick={handleCopy}
+            disabled={loading || liveAccounts.length === 0 || (selectedAccObj && parseFloat(selectedAccObj.balance) < minCopy)}
             className="flex-1 btn-primary flex items-center justify-center gap-2">
             {loading && <Loader2 className="w-4 h-4 animate-spin" />}
             {loading ? "Starting…" : "Start Copying"}
@@ -272,6 +280,7 @@ export default function CopyTradingPage() {
   const [providers, setProviders]       = useState([]);
   const [accounts, setAccounts]         = useState([]);
   const [myCopies, setMyCopies]         = useState([]); // active copy relationships
+  const [siteSettings, setSiteSettings] = useState(null);
   const [loadingProviders, setLP]       = useState(true);
   const [search, setSearch]             = useState("");
   const [sortBy, setSortBy]             = useState("ROI");
@@ -282,14 +291,16 @@ export default function CopyTradingPage() {
   const fetchAll = useCallback(async () => {
     setLP(true); setError("");
     try {
-      const [provRes, accRes, copiesRes] = await Promise.all([
+      const [provRes, accRes, copiesRes, settingsRes] = await Promise.all([
         copyTradingService.getProviders(),
         accountService.getAll(),
         copyTradingService.getMyCopies(),
+        siteService.getSettings(),
       ]);
       setProviders(Array.isArray(provRes.data)    ? provRes.data    : []);
       setAccounts(accRes.accounts                 ?? []);
       setMyCopies(Array.isArray(copiesRes.data)   ? copiesRes.data  : []);
+      setSiteSettings(settingsRes.data            ?? null);
     } catch (err) {
       setError(err.message || "Failed to load providers.");
     } finally {
@@ -327,6 +338,7 @@ export default function CopyTradingPage() {
   };
 
   const handleStop = async (provider) => {
+    if (!window.confirm(`Are you sure you want to stop copying ${provider.name}?`)) return;
     try {
       await copyTradingService.stopCopy(provider.id);
       setToast({ message: `Stopped copying ${provider.name}.`, type: "success" });
@@ -497,6 +509,7 @@ export default function CopyTradingPage() {
         <CopyModal
           provider={copyingModal}
           accounts={accounts}
+          siteSettings={siteSettings}
           onClose={() => setCopyingModal(null)}
           onSuccess={handleCopySuccess}
         />
