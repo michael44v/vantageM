@@ -1517,6 +1517,34 @@ function handle_copy_signal($db, $input) {
         send_json(['success' => false, 'error' => 'Missing required fields.'], 400);
     }
 
+    // 1. Fetch min/max copy balance from settings
+    $settings_res = $db->query("SELECT `key`, `value` FROM settings WHERE `key` IN ('min_copy_balance', 'max_copy_balance')");
+    $sets = [];
+    while($srow = $settings_res->fetch_assoc()) $sets[$srow['key']] = $srow['value'];
+
+    $min_copy = (float)($sets['min_copy_balance'] ?? 1000);
+    $max_copy = (float)($sets['max_copy_balance'] ?? 10000000);
+
+    // 2. User cannot copy more than one provider at a time
+    $active_copy = $db->query("SELECT id FROM copy_relationships WHERE copier_id = $copier_id AND status = 'active' LIMIT 1");
+    if ($active_copy->num_rows > 0) {
+        send_json(['success' => false, 'error' => 'You are already copying a provider. Please stop the current one before copying another.'], 400);
+    }
+
+    // 3. Check account balance
+    $acc_res = $db->query("SELECT balance FROM trading_accounts WHERE id = $trading_account_id AND user_id = $copier_id LIMIT 1");
+    if ($acc_res->num_rows === 0) {
+        send_json(['success' => false, 'error' => 'Trading account not found.'], 404);
+    }
+    $acc_balance = (float)$acc_res->fetch_assoc()['balance'];
+
+    if ($acc_balance < $min_copy) {
+        send_json(['success' => false, 'error' => sprintf('Insufficient balance. A minimum of $%.2f is required to copy trade.', $min_copy)], 400);
+    }
+    if ($acc_balance > $max_copy) {
+        send_json(['success' => false, 'error' => sprintf('Balance exceeds maximum allowed for copy trading ($%.2f).', $max_copy)], 400);
+    }
+
     // Resolve signal → provider user_id
     $sig_res = $db->query("SELECT user_id FROM signals WHERE id = $signal_id LIMIT 1");
     if ($sig_res->num_rows === 0) {
@@ -1814,7 +1842,7 @@ function handle_admin_get_settings($db) {
 }
 
 function handle_get_site_settings($db) {
-    $res = $db->query("SELECT `key`, `value` FROM settings WHERE `key` IN ('site_name', 'site_logo', 'support_email', 'default_currency', 'min_deposit', 'max_deposit', 'wallet_btc', 'wallet_eth', 'wallet_usdt')");
+    $res = $db->query("SELECT `key`, `value` FROM settings WHERE `key` IN ('site_name', 'site_logo', 'support_email', 'default_currency', 'min_deposit', 'max_deposit', 'wallet_btc', 'wallet_eth', 'wallet_usdt', 'min_copy_balance', 'max_copy_balance')");
     $settings = [];
     while ($row = $res->fetch_assoc()) {
         $settings[$row['key']] = $row['value'];
