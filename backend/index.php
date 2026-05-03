@@ -928,19 +928,26 @@ function handle_stop_copy($db, $input) {
     $user_id     = get_auth_user_id();
     if (!$user_id) send_json(['success' => false, 'error' => 'Unauthorized'], 401);
 
-    $provider_id = (int)($input['provider_id'] ?? 0);
-    if (!$provider_id) send_json(['success' => false, 'error' => 'Missing provider_id.'], 400);
+    $signal_id = (int)($input['provider_id'] ?? 0); // signals.id from frontend
+    if (!$signal_id) send_json(['success' => false, 'error' => 'Missing provider_id.'], 400);
+
+    // Get the provider (user) ID associated with this signal
+    $sig_res = $db->query("SELECT user_id FROM signals WHERE id = $signal_id LIMIT 1");
+    if ($sig_res->num_rows === 0) send_json(['success' => false, 'error' => 'Signal not found.'], 404);
+    $provider_user_id = (int)$sig_res->fetch_assoc()['user_id'];
 
     $db->query(
         "UPDATE copy_relationships
          SET    status = 'stopped'
          WHERE  copier_id    = $user_id
-           AND  provider_id  = $provider_id
+           AND  provider_id  = $provider_user_id
            AND  status       = 'active'"
     );
 
-    // Decrement subscriber count
-    $db->query("UPDATE signals SET subscribers = GREATEST(subscribers - 1, 0) WHERE user_id = $provider_id");
+    if ($db->affected_rows > 0) {
+        // Decrement subscriber count only if a relationship was actually stopped
+        $db->query("UPDATE signals SET subscribers = GREATEST(subscribers - 1, 0) WHERE id = $signal_id");
+    }
 
     send_json(['success' => true, 'message' => 'Stopped copying this provider.']);
 }

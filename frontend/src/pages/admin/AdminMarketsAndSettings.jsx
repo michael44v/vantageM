@@ -162,6 +162,8 @@ export function AdminSettings() {
               { label: "BTC Wallet Address", key: "wallet_btc" },
               { label: "ETH Wallet Address", key: "wallet_eth" },
               { label: "USDT Wallet Address", key: "wallet_usdt" },
+              { label: "Min Copy Balance (USD)", key: "min_copy_balance" },
+              { label: "Max Copy Balance (USD)", key: "max_copy_balance" },
             ].map((f) => (
               <div key={f.key}>
                 <label className="text-xs font-bold uppercase tracking-wider text-[#8897A9] block mb-1.5">{f.label}</label>
