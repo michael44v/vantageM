@@ -9,18 +9,10 @@ const CLOUDINARY_CLOUD  = "dguvkirdr";
 const CLOUDINARY_PRESET = "ablemarkets";
 
 const CRYPTO_WALLETS = [
-  { symbol: "BTC",  name: "Bitcoin",   network: "Bitcoin Network",   address: "bc1qmal2x2cuadsazm30k8k9r4f49vjemag0n5veue", color: "#F7931A", icon: "₿" },
-  { symbol: "ETH",  name: "Ethereum",  network: "ERC-20",            address: "0x76b4290026e9BF4770714C6a67302C97724D98aF", color: "#627EEA", icon: "Ξ" },
-  { symbol: "USDT", name: "Tether",    network: "TRC-20 (TRON)",     address: "TT5sbDn7brY96wpBEia8Vd4uxGN8vE6M9W",         color: "#26A17B", icon: "₮" },
-  { symbol: "BNB",  name: "BNB",       network: "BNB Smart Chain",   address: "0x76b4290026e9BF4770714C6a67302C97724D98aF", color: "#F3BA2F", icon: "B" },
-];
-
-const BANK_DETAILS = [
-  { label: "Bank Name",      value: "vāntãgeCFD Global Prime" },
-  { label: "Account Number", value: "881 223 990 001" },
-  { label: "SWIFT / BIC",    value: "VGPGBK11XX" },
-  { label: "Account Name",   value: "vāntãgeCFD Ltd" },
-  { label: "Reference",      value: "Your registered email" },
+  { symbol: "BTC",  name: "Bitcoin",   network: "Bitcoin Network",   color: "#F7931A", icon: "₿" },
+  { symbol: "ETH",  name: "Ethereum",  network: "ERC-20",            color: "#627EEA", icon: "Ξ" },
+  { symbol: "USDT", name: "Tether",    network: "TRC-20 (TRON)",     color: "#26A17B", icon: "₮" },
+  { symbol: "BNB",  name: "BNB",       network: "BNB Smart Chain",   color: "#F3BA2F", icon: "B" },
 ];
 
 const CRYPTO_WITHDRAW_WALLETS = [
@@ -29,16 +21,6 @@ const CRYPTO_WITHDRAW_WALLETS = [
   { symbol: "USDT", name: "Tether",    network: "TRC-20 (TRON)" },
   { symbol: "BNB",  name: "BNB",       network: "BNB Smart Chain" },
 ];
-
-function QRCode({ value, size = 160 }) {
-  return (
-    <img
-      src={`https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(value)}&bgcolor=ffffff&color=000000&margin=10`}
-      alt="Wallet QR Code" width={size} height={size}
-      className="rounded-xl border border-surface-border"
-    />
-  );
-}
 
 function CopyBtn({ text }) {
   const [copied, setCopied] = useState(false);
@@ -88,9 +70,7 @@ async function uploadToCloudinary(file) {
 
 export default function DepositWithdraw() {
   const [tab,            setTab]           = useState("deposit");
-  const [method,         setMethod]        = useState("bank");
   const [selectedCrypto, setCrypto]        = useState(CRYPTO_WALLETS[0]);
-  const [step,           setStep]          = useState(1);
   const [amount,         setAmount]        = useState("");
   const [txRef,          setTxRef]         = useState("");
   const [receipt,        setReceipt]       = useState(null);
@@ -114,27 +94,23 @@ export default function DepositWithdraw() {
 
   useEffect(() => { fetchWallet(); }, [fetchWallet]);
 
-  const validateStep1 = () => {
+  const validateDeposit = () => {
     const errs = {};
     const val  = parseFloat(amount);
-    if (!amount || isNaN(val)) errs.amount = "Please enter an amount.";
-    else if (val < 10)         errs.amount = "Minimum deposit is $100.00.";
-    else if (val > 15000000)      errs.amount = "Maximum is $15,000,000.00.";
-    setFieldErr(errs);
-    return !Object.keys(errs).length;
-  };
+    if (!amount || isNaN(val)) errs.amount  = "Please enter an amount.";
+    else if (val < 10)         errs.amount  = "Minimum deposit is $100.00.";
+    else if (val > 15000000)   errs.amount  = "Maximum is $15,000,000.00.";
 
-  const validateStep2 = () => {
-    const errs = {};
     if (!txRef.trim()) errs.txRef   = "Transaction reference is required.";
-    if (!receipt)      errs.receipt = "Please upload a receipt.";
+    if (!receipt)      errs.receipt = "Please upload a deposit slip / receipt.";
+
     setFieldErr(errs);
     return !Object.keys(errs).length;
   };
 
   // ── Deposit submit: Cloudinary first, then API ────────────────────────────
   const handleDepositSubmit = async () => {
-    if (!validateStep2()) return;
+    if (!validateDeposit()) return;
     setUploadStep("cloudinary");
     try {
       // 1. Upload receipt to Cloudinary
@@ -145,14 +121,14 @@ export default function DepositWithdraw() {
       await paymentService.submitDeposit({
         amount:       parseFloat(amount),
         currency:     "USD",
-        method:       method === "crypto" ? "crypto" : "bank_wire",
-        cryptoSymbol: method === "crypto" ? selectedCrypto.symbol : undefined,
+        method:       "crypto",
+        cryptoSymbol: selectedCrypto.symbol,
         txRef,
         receiptUrl:   secure_url,
       });
 
       setToast({ message: "Deposit proof submitted! We'll credit your wallet within 24h.", type: "success" });
-      setStep(1); setAmount(""); setTxRef(""); setReceipt(null);
+      setAmount(""); setTxRef(""); setReceipt(null); setFieldErr({});
       fetchWallet();
     } catch (err) {
       setToast({ message: err.message || "Submission failed.", type: "error" });
@@ -162,9 +138,9 @@ export default function DepositWithdraw() {
   };
 
   const isSubmitting = !!uploadStep;
-  const submitLabel  = uploadStep === "cloudinary" ? "Uploading receipt…"
+  const submitLabel  = uploadStep === "cloudinary" ? "Uploading slip…"
                      : uploadStep === "saving"     ? "Saving request…"
-                     : "Submit Deposit Proof";
+                     : "Submit Deposit Slip";
 
   // ── Withdraw submit ───────────────────────────────────────────────────────
   const handleWithdraw = async () => {
@@ -222,7 +198,7 @@ export default function DepositWithdraw() {
         </div>
         <div className="flex gap-2">
           {["deposit","withdraw"].map((t) => (
-            <button key={t} onClick={() => { setTab(t); setStep(1); setFieldErr({}); }}
+            <button key={t} onClick={() => { setTab(t); setFieldErr({}); }}
               className={`px-5 py-2 text-xs font-bold rounded-full capitalize transition-colors ${tab === t ? "bg-accent text-white" : "bg-surface text-primary hover:bg-surface-border"}`}>
               {t}
             </button>
@@ -232,151 +208,130 @@ export default function DepositWithdraw() {
 
       {/* ── DEPOSIT ──────────────────────────────────────────────────────── */}
       {tab === "deposit" ? (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Method selector */}
-          <div className="lg:col-span-1 space-y-3">
-            <p className="text-xs font-bold uppercase tracking-widest text-[#8897A9] mb-4">Select Method</p>
-            {[
-              { key: "bank",   label: "Bank Wire", sub: "Manual — 1–3 business days" },
-              { key: "crypto", label: "Crypto",    sub: "BTC · ETH · USDT · BNB" },
-            ].map((m) => (
-              <button key={m.key} onClick={() => { setMethod(m.key); setStep(1); setFieldErr({}); }}
-                className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-all text-left ${method === m.key ? "border-accent bg-accent/5 ring-1 ring-accent" : "border-surface-border bg-white hover:border-accent/40"}`}>
-                <div className="w-10 h-10 rounded-full bg-surface flex items-center justify-center flex-shrink-0">
-                  <Wallet className="w-5 h-5 text-accent" />
-                </div>
-                <div>
-                  <div className="font-bold text-primary text-sm">{m.label}</div>
-                  <div className="text-[10px] text-[#8897A9]">{m.sub}</div>
-                </div>
+        <div className="max-w-xl mx-auto bg-white border border-surface-border rounded-xl p-6 sm:p-8 shadow-card space-y-6">
+          <div className="space-y-1">
+            <h3 className="font-display font-bold text-xl text-primary">Crypto Deposit</h3>
+            <p className="text-xs text-[#8897A9]">Select cryptocurrency, enter amount and upload deposit slip.</p>
+          </div>
+
+          {/* Select Cryptocurrency */}
+          <Field label="Select Cryptocurrency" error={null}>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {CRYPTO_WALLETS.map((c) => (
+                <button
+                  key={c.symbol}
+                  type="button"
+                  onClick={() => setCrypto(c)}
+                  className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all text-center ${
+                    selectedCrypto.symbol === c.symbol
+                      ? "border-accent bg-accent/5 ring-1 ring-accent"
+                      : "border-surface-border bg-white hover:border-accent/40"
+                  }`}
+                >
+                  <div
+                    className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold mb-1.5"
+                    style={{ backgroundColor: c.color }}
+                  >
+                    {c.icon}
+                  </div>
+                  <div className="font-bold text-primary text-xs">{c.symbol}</div>
+                  <div className="text-[10px] text-[#8897A9] truncate w-full">{c.network}</div>
+                </button>
+              ))}
+            </div>
+          </Field>
+
+          {/* Amount Input */}
+          <Field label="Amount (USD)" error={fieldErr.amount}>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-primary">$</span>
+              <input
+                type="number"
+                value={amount}
+                onChange={(e) => {
+                  setAmount(e.target.value);
+                  setFieldErr((p) => ({ ...p, amount: undefined }));
+                }}
+                placeholder="0.00"
+                className={`input-field pl-8 font-bold ${fieldErr.amount ? "border-red-400" : ""}`}
+              />
+            </div>
+            <p className="text-[10px] text-[#8897A9] mt-1 italic">Min: $100 · Max: $15,000,000</p>
+          </Field>
+
+          {/* Preset Buttons */}
+          <div className="flex gap-2 flex-wrap">
+            {[100, 500, 1000, 5000].map((v) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setAmount(String(v))}
+                className={`px-3 py-1.5 rounded-lg border text-xs font-bold transition-colors ${
+                  parseFloat(amount) === v
+                    ? "border-accent bg-accent/10 text-accent"
+                    : "border-surface-border text-[#8897A9] hover:border-accent/40"
+                }`}
+              >
+                ${v.toLocaleString()}
               </button>
             ))}
-
-            {method === "crypto" && (
-              <div className="pt-3 space-y-2">
-                <p className="text-xs font-bold uppercase tracking-widest text-[#8897A9]">Select Coin</p>
-                {CRYPTO_WALLETS.map((c) => (
-                  <button key={c.symbol} onClick={() => setCrypto(c)}
-                    className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-left ${selectedCrypto.symbol === c.symbol ? "border-accent bg-accent/5" : "border-surface-border bg-white hover:border-accent/30"}`}>
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0" style={{ backgroundColor: c.color }}>{c.icon}</div>
-                    <div>
-                      <div className="font-bold text-primary text-sm">{c.symbol}</div>
-                      <div className="text-[10px] text-[#8897A9]">{c.network}</div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
 
-          {/* Action panel */}
-          <div className="lg:col-span-2 bg-white border border-surface-border rounded-xl p-6 sm:p-8 shadow-card">
-            {step === 1 ? (
-              <div className="space-y-6">
-                <h3 className="font-display font-bold text-xl text-primary">Enter Deposit Amount</h3>
-                <Field label="Amount (USD)" error={fieldErr.amount}>
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-primary">$</span>
-                    <input type="number" value={amount}
-                      onChange={(e) => { setAmount(e.target.value); setFieldErr((p) => ({ ...p, amount: undefined })); }}
-                      placeholder="0.00" className={`input-field pl-8 text-lg font-bold ${fieldErr.amount ? "border-red-400" : ""}`} />
-                  </div>
-                  <p className="text-[10px] text-[#8897A9] mt-1 italic">Min: $100 · Max: $15,000,000</p>
-                </Field>
-                <div className="flex gap-2 flex-wrap">
-                  {[100, 500, 1000, 5000].map((v) => (
-                    <button key={v} onClick={() => setAmount(String(v))}
-                      className={`px-3 py-1.5 rounded-lg border text-xs font-bold transition-colors ${parseFloat(amount) === v ? "border-accent bg-accent/10 text-accent" : "border-surface-border text-[#8897A9] hover:border-accent/40"}`}>
-                      ${v.toLocaleString()}
-                    </button>
-                  ))}
-                </div>
-                <button onClick={() => { if (validateStep1()) setStep(2); }} className="w-full btn-primary flex items-center justify-center gap-2">
-                  Continue <ArrowRight className="w-4 h-4" />
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-6 animate-fade-in">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-display font-bold text-xl text-primary">
-                    {method === "crypto" ? `Send ${selectedCrypto.symbol}` : "Bank Transfer"}
-                  </h3>
-                  <span className="text-sm font-bold text-accent">${parseFloat(amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
-                </div>
+          {/* Transaction Reference / Hash */}
+          <Field label="Transaction Hash / Reference" error={fieldErr.txRef}>
+            <input
+              type="text"
+              value={txRef}
+              onChange={(e) => {
+                setTxRef(e.target.value);
+                setFieldErr((p) => ({ ...p, txRef: undefined }));
+              }}
+              placeholder="0x… or transaction reference"
+              className={`input-field font-mono text-sm ${fieldErr.txRef ? "border-red-400" : ""}`}
+            />
+          </Field>
 
-                {method === "crypto" ? (
-                  <div className="space-y-5">
-                    <div className="flex flex-col sm:flex-row items-center gap-6 p-5 bg-surface rounded-xl border border-surface-border">
-                      <QRCode value={selectedCrypto.address} size={140} />
-                      <div className="flex-1 space-y-3 w-full">
-                        <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0" style={{ backgroundColor: selectedCrypto.color }}>{selectedCrypto.icon}</div>
-                          <span className="font-bold text-primary">{selectedCrypto.name}</span>
-                          <span className="text-xs text-[#8897A9]">({selectedCrypto.network})</span>
-                        </div>
-                        <div>
-                          <p className="text-[10px] text-[#8897A9] font-bold uppercase mb-1">Wallet Address</p>
-                          <div className="flex items-start gap-1">
-                            <code className="text-xs font-mono text-primary break-all leading-relaxed">{selectedCrypto.address}</code>
-                            <CopyBtn text={selectedCrypto.address} />
-                          </div>
-                        </div>
-                        <div className="text-[10px] text-[#8897A9] bg-white border border-surface-border rounded-lg px-3 py-2">
-                          Send only <span className="font-bold text-primary">{selectedCrypto.symbol}</span> on <span className="font-bold text-primary">{selectedCrypto.network}</span>. Wrong network = permanent loss.
-                        </div>
-                      </div>
-                    </div>
-                    <Field label="Transaction Hash / ID" error={fieldErr.txRef}>
-                      <input type="text" value={txRef}
-                        onChange={(e) => { setTxRef(e.target.value); setFieldErr((p) => ({ ...p, txRef: undefined })); }}
-                        placeholder="0x… or txid…" className={`input-field font-mono text-sm ${fieldErr.txRef ? "border-red-400" : ""}`} />
-                    </Field>
-                    <Field label="Upload Screenshot / Proof" error={fieldErr.receipt}>
-                      <label className={`border-2 border-dashed rounded-xl p-6 flex flex-col items-center text-center cursor-pointer group transition-colors ${fieldErr.receipt ? "border-red-300 bg-red-50" : "border-surface-border hover:border-accent"}`}>
-                        <input type="file" className="sr-only" accept="image/*" onChange={(e) => { setReceipt(e.target.files?.[0] ?? null); setFieldErr((p) => ({ ...p, receipt: undefined })); }} />
-                        {receipt ? <><CheckCircle className="w-7 h-7 text-emerald-500 mb-2" /><p className="text-sm font-bold text-primary">{receipt.name}</p></> : <><Upload className="w-7 h-7 text-[#8897A9] group-hover:text-accent mb-2 transition-colors" /><p className="text-sm font-bold text-primary">Upload confirmation screenshot</p></>}
-                      </label>
-                    </Field>
-                  </div>
-                ) : (
-                  <div className="space-y-5">
-                    <div className="bg-surface rounded-xl p-5 border border-surface-border space-y-3">
-                      {BANK_DETAILS.map((row) => (
-                        <div key={row.label} className="flex items-center justify-between text-sm gap-4 flex-wrap">
-                          <span className="text-[#8897A9] flex-shrink-0">{row.label}</span>
-                          <span className="font-bold text-primary flex items-center gap-1 break-all text-right">{row.value}<CopyBtn text={row.value} /></span>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="bg-amber-50 border border-amber-100 rounded-lg p-4 flex gap-3">
-                      <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
-                      <p className="text-xs text-amber-800">Use your registered email as the transfer reference. Credited within 1–3 business days.</p>
-                    </div>
-                    <Field label="Transaction Reference" error={fieldErr.txRef}>
-                      <input type="text" value={txRef}
-                        onChange={(e) => { setTxRef(e.target.value); setFieldErr((p) => ({ ...p, txRef: undefined })); }}
-                        placeholder="e.g. REF-20240401-001" className={`input-field ${fieldErr.txRef ? "border-red-400" : ""}`} />
-                    </Field>
-                    <Field label="Upload Receipt" error={fieldErr.receipt}>
-                      <label className={`border-2 border-dashed rounded-xl p-6 flex flex-col items-center text-center cursor-pointer group transition-colors ${fieldErr.receipt ? "border-red-300 bg-red-50" : "border-surface-border hover:border-accent"}`}>
-                        <input type="file" className="sr-only" accept="image/*,application/pdf" onChange={(e) => { setReceipt(e.target.files?.[0] ?? null); setFieldErr((p) => ({ ...p, receipt: undefined })); }} />
-                        {receipt ? <><CheckCircle className="w-7 h-7 text-emerald-500 mb-2" /><p className="text-sm font-bold text-primary">{receipt.name}</p></> : <><Upload className="w-7 h-7 text-[#8897A9] group-hover:text-accent mb-2 transition-colors" /><p className="text-sm font-bold text-primary">Click to upload</p><p className="text-xs text-[#8897A9]">PNG, JPG, PDF up to 10MB</p></>}
-                      </label>
-                    </Field>
-                  </div>
-                )}
+          {/* Upload Deposit Slip */}
+          <Field label="Upload Deposit Slip / Proof" error={fieldErr.receipt}>
+            <label
+              className={`border-2 border-dashed rounded-xl p-6 flex flex-col items-center text-center cursor-pointer group transition-colors ${
+                fieldErr.receipt ? "border-red-300 bg-red-50" : "border-surface-border hover:border-accent"
+              }`}
+            >
+              <input
+                type="file"
+                className="sr-only"
+                accept="image/*,application/pdf"
+                onChange={(e) => {
+                  setReceipt(e.target.files?.[0] ?? null);
+                  setFieldErr((p) => ({ ...p, receipt: undefined }));
+                }}
+              />
+              {receipt ? (
+                <>
+                  <CheckCircle className="w-7 h-7 text-emerald-500 mb-2" />
+                  <p className="text-sm font-bold text-primary">{receipt.name}</p>
+                </>
+              ) : (
+                <>
+                  <Upload className="w-7 h-7 text-[#8897A9] group-hover:text-accent mb-2 transition-colors" />
+                  <p className="text-sm font-bold text-primary">Click to upload deposit slip</p>
+                  <p className="text-xs text-[#8897A9]">PNG, JPG, PDF up to 10MB</p>
+                </>
+              )}
+            </label>
+          </Field>
 
-                <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                  <button onClick={() => { setStep(1); setFieldErr({}); }} className="sm:w-28 btn-ghost text-sm">← Back</button>
-                  <button onClick={handleDepositSubmit} disabled={isSubmitting}
-                    className="flex-1 btn-primary flex items-center justify-center gap-2">
-                    {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                    {submitLabel}
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+          {/* Submit Button */}
+          <button
+            type="button"
+            onClick={handleDepositSubmit}
+            disabled={isSubmitting}
+            className="w-full btn-primary py-3.5 flex items-center justify-center gap-2"
+          >
+            {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+            {submitLabel}
+          </button>
         </div>
       ) : (
         /* ── WITHDRAW ──────────────────────────────────────────────────────── */
